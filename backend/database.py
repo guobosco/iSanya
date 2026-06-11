@@ -4,7 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "Lulu_v2.db")
+DEFAULT_DB_PATH = os.path.join(BASE_DIR, "isanya.db")
 DB_PATH = os.getenv("LULU_DB_PATH", DEFAULT_DB_PATH)
 SQLALCHEMY_DATABASE_URL = os.getenv("LULU_DATABASE_URL", f"sqlite:///{DB_PATH}")
 IS_SQLITE = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
