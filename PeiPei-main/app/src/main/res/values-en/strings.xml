@@ -1,0 +1,43 @@
+<!-- 文件说明：英文本地化字符串资源。 -->
+<resources>
+    <string name="app_name">i三亚</string>
+
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+
+    <string name="data_synced">Data synced</string>
+    <string name="syncing_data">Refreshing data</string>
+    <string name="network_disconnected_message">Unable to connect to the network. Check whether your network settings are working properly.</string>
+    <string name="permission_required">Permission Required</string>
+
+    <string name="today">Today</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="publish_service">Publish Service</string>
+    <string name="home_discover_empty_title">No content yet</string>
+    <string name="home_discover_empty_subtitle">Pull down to refresh</string>
+    <string name="experience_per_guest_prefix">From </string>
+    <string name="experience_yuan_symbol">¥</string>
+    <string name="experience_price_from_suffix"> / guest</string>
+    <string name="experience_explore_place">Sanya</string>
+    <string name="experience_explore_title">Explore %1$s · %2$d experiences</string>
+    <string name="experience_open_category_cd">View all experiences in this category</string>
+    <string name="cancelled">Cancelled</string>
+
+    <string name="action_star">Star</string>
+    <string name="action_unstar">Unstar</string>
+
+    <string name="service_host_term">Service host</string>
+    <string name="service_provider_badge">Service host</string>
+
+    <string name="search_placeholder">Search hosts, services</string>
+    <string name="search_action">Search</string>
+    <string name="search_history_title">History</string>
+    <string name="search_history_clear">Clear history</string>
+    <string name="search_guess_title">You might search</string>
+    <string name="search_more_options">More</string>
+    <string name="search_refresh_suggestions">Refresh suggestions</string>
+    <string name="search_camera_cd">Scan QR</string>
+    <string name="search_clear_query_cd">Clear text</string>
+    <string name="search_back_cd">Back</string>
+</resources>

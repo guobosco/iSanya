@@ -1,0 +1,215 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  padding-bottom: 240rpx;
+  background: #ffffff;
+}
+
+.header {
+  padding: 20rpx 48rpx 20rpx;
+}
+
+.headerActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12rpx;
+}
+
+.actionButton {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #f0f0f0;
+  color: #242424;
+  font-size: 28rpx;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.headerTitle {
+  display: block;
+  margin-top: 24rpx;
+  color: #202020;
+  font-size: 48rpx;
+  line-height: 60rpx;
+  font-weight: 600;
+}
+
+.profileCard {
+  margin: 38rpx 48rpx 0;
+  padding: 40rpx 24rpx 18rpx;
+  border-radius: 40rpx;
+  background: #ffffff;
+  box-shadow: 0 10rpx 40rpx rgba(32, 32, 32, 0.08);
+}
+
+.profileMain {
+  display: flex;
+}
+
+.profileLeft {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avatar {
+  width: 212rpx;
+  height: 212rpx;
+  border-radius: 106rpx;
+  background: linear-gradient(160deg, #f4dce6 0%, #ffeaf1 100%);
+  color: #202020;
+  font-size: 72rpx;
+  font-weight: 700;
+  line-height: 212rpx;
+  text-align: center;
+}
+
+.profileName {
+  margin-top: 20rpx;
+  color: #202020;
+  font-size: 42rpx;
+  font-weight: 700;
+}
+
+.profileRegion {
+  margin-top: 8rpx;
+  color: #666666;
+  font-size: 26rpx;
+}
+
+.profileRight {
+  width: 40%;
+  padding-left: 20rpx;
+}
+
+.statBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.statLabel {
+  color: #666666;
+  font-size: 24rpx;
+}
+
+.statValue {
+  color: #202020;
+  font-size: 32rpx;
+  font-weight: 500;
+}
+
+.divider {
+  height: 2rpx;
+  margin: 18rpx 0;
+  background: #ececec;
+}
+
+.moreHint {
+  display: block;
+  margin-top: 12rpx;
+  color: #8d8d8d;
+  font-size: 18rpx;
+  text-align: right;
+}
+
+.cellGroup {
+  overflow: hidden;
+  margin: 16rpx 48rpx 0;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 4rpx 18rpx rgba(32, 32, 32, 0.05);
+}
+
+.cellItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 98rpx;
+  padding: 0 24rpx;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.cellGroup .cellItem:last-child {
+  border-bottom: 0;
+}
+
+.cellLeft,
+.cellRight {
+  display: flex;
+  align-items: center;
+}
+
+.cellIcon {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 22rpx;
+  background: #f4f4f4;
+  color: #202020;
+  font-size: 22rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+
+.cellTitle {
+  margin-left: 18rpx;
+  color: #202020;
+  font-size: 28rpx;
+}
+
+.cellBadge {
+  width: 14rpx;
+  height: 14rpx;
+  margin-right: 16rpx;
+  border-radius: 7rpx;
+  background: #ff4d4f;
+}
+
+.cellArrow {
+  color: #999999;
+  font-size: 30rpx;
+}
+
+.publishBar {
+  position: fixed;
+  left: 48rpx;
+  right: 48rpx;
+  bottom: 40rpx;
+  display: flex;
+  align-items: center;
+  padding: 28rpx 24rpx;
+  border-radius: 44rpx;
+  background: #f7f7f7;
+}
+
+.publishIcon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: #202020;
+  color: #ffffff;
+  font-size: 28rpx;
+  line-height: 80rpx;
+  text-align: center;
+}
+
+.publishText {
+  display: flex;
+  flex-direction: column;
+  margin-left: 24rpx;
+}
+
+.publishTitle {
+  color: #202020;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.publishDesc {
+  margin-top: 4rpx;
+  color: #717171;
+  font-size: 24rpx;
+}

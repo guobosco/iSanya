@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-multipart
+python-jose
+passlib[bcrypt]
+redis
+psycopg[binary]

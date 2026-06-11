@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- 文件说明：默认资源颜色名与色值定义。 -->
+<!-- 全局颜色资源表：集中维护品牌色与通用语义色，供主题与界面复用。 -->
+<resources>
+    <color name="brand_pink">#ff5a5f</color>
+    <color name="brand_pink_dark">#E5484E</color>
+    <color name="brand_pink_container">#FFD8DA</color>
+    <color name="brand_cyan">#C53C42</color>
+    <color name="brand_cream">#F2F0EA</color>
+    <color name="brand_surface">#FFFBF7</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray">#7B707A</color>
+    <color name="light_gray">#E7DFE3</color>
+    <color name="success">#4FA26F</color>
+    <color name="error">#D95C73</color>
+    <color name="warning">#F0B94E</color>
+</resources>

@@ -1,0 +1,170 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.header {
+  padding: 20rpx 48rpx 12rpx;
+  background: #ffffff;
+}
+
+.headerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+
+.actionButton {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #f0f0f0;
+  color: #242424;
+  font-size: 28rpx;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.headerTitle {
+  display: block;
+  margin-top: 24rpx;
+  color: #202020;
+  font-size: 48rpx;
+  line-height: 60rpx;
+  font-weight: 600;
+}
+
+.tabScroll {
+  margin-top: 24rpx;
+  white-space: nowrap;
+}
+
+.tabRow {
+  display: inline-flex;
+  gap: 20rpx;
+  padding-bottom: 8rpx;
+}
+
+.tabChip,
+.tabChipActive {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+}
+
+.tabChip {
+  background: #f1f1f1;
+  color: #3b3b3b;
+}
+
+.tabChipActive {
+  background: #1f1f1f;
+  color: #ffffff;
+}
+
+.messageList {
+  padding: 8rpx 0 20rpx;
+}
+
+.messageItem {
+  display: flex;
+  align-items: flex-start;
+  padding: 24rpx 40rpx;
+  background: #ffffff;
+}
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  border: 2rpx solid #e4e4e4;
+  background: #f8f8f8;
+  color: #2f2730;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.messageMain {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.messageTop {
+  display: flex;
+  align-items: center;
+}
+
+.messageTitle {
+  flex: 1;
+  color: #1f1f1f;
+  font-size: 34rpx;
+  font-weight: 500;
+}
+
+.messageTime {
+  margin-left: 16rpx;
+  color: #8c8c8c;
+  font-size: 24rpx;
+}
+
+.messageSnippetRow {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+
+.messageSnippet {
+  flex: 1;
+  color: #777777;
+  font-size: 28rpx;
+  line-height: 40rpx;
+}
+
+.starMark {
+  margin-left: 12rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  background: #fff4cf;
+  color: #a36f00;
+  font-size: 22rpx;
+}
+
+.emptyWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 220rpx;
+}
+
+.emptyIcon {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 38rpx;
+  background: #f2f2f2;
+  color: #2f2f2f;
+  font-size: 30rpx;
+  line-height: 76rpx;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin-top: 52rpx;
+  color: #202020;
+  font-size: 44rpx;
+  font-weight: 600;
+}
+
+.emptyDesc {
+  margin-top: 16rpx;
+  color: #8d8d8d;
+  font-size: 28rpx;
+}

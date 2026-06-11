@@ -1,0 +1,183 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.header {
+  padding: 20rpx 48rpx 20rpx;
+}
+
+.headerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  margin-top: 12rpx;
+}
+
+.actionButton {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #f0f0f0;
+  color: #242424;
+  font-size: 28rpx;
+  line-height: 88rpx;
+  text-align: center;
+}
+
+.headerTitle {
+  display: block;
+  margin-top: 24rpx;
+  color: #202020;
+  font-size: 48rpx;
+  line-height: 60rpx;
+  font-weight: 600;
+}
+
+.groupGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24rpx;
+  padding: 12rpx 32rpx 28rpx;
+}
+
+.groupCard {
+  overflow: hidden;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 28rpx rgba(32, 32, 32, 0.08);
+}
+
+.groupCover {
+  height: 220rpx;
+}
+
+.wishCoverA {
+  background: linear-gradient(160deg, #f3ddda 0%, #f7efe4 100%);
+}
+
+.wishCoverB {
+  background: linear-gradient(160deg, #d3eadf 0%, #edf6e8 100%);
+}
+
+.wishCoverC {
+  background: linear-gradient(160deg, #dfe5fb 0%, #f5f1ff 100%);
+}
+
+.wishCoverD {
+  background: linear-gradient(160deg, #f0e0e7 0%, #fbf0f5 100%);
+}
+
+.groupBody {
+  padding: 20rpx 22rpx 24rpx;
+}
+
+.groupName {
+  display: block;
+  color: #1f1f1f;
+  font-size: 30rpx;
+  line-height: 40rpx;
+  font-weight: 600;
+}
+
+.groupCount {
+  display: block;
+  margin-top: 8rpx;
+  color: #777777;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.groupBackBar {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 36rpx 8rpx;
+}
+
+.backArrow {
+  color: #666666;
+  font-size: 44rpx;
+  line-height: 56rpx;
+}
+
+.groupBackTitle {
+  margin-left: 8rpx;
+  color: #202020;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.groupBackCount {
+  margin-left: auto;
+  color: #8d8d8d;
+  font-size: 24rpx;
+}
+
+.serviceList {
+  padding: 12rpx 32rpx 40rpx;
+}
+
+.expandedCard {
+  overflow: hidden;
+  margin-bottom: 28rpx;
+  border-radius: 28rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 28rpx rgba(32, 32, 32, 0.08);
+}
+
+.expandedCover {
+  position: relative;
+  height: 360rpx;
+  background: linear-gradient(160deg, #d6ddfb 0%, #f4e8f0 100%);
+}
+
+.chatPill,
+.favoriteMark {
+  position: absolute;
+  top: 20rpx;
+  height: 48rpx;
+  padding: 0 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1b1b1b;
+  font-size: 22rpx;
+  line-height: 48rpx;
+}
+
+.chatPill {
+  left: 20rpx;
+}
+
+.favoriteMark {
+  right: 20rpx;
+}
+
+.expandedBody {
+  padding: 20rpx 24rpx 24rpx;
+}
+
+.expandedTitle {
+  display: block;
+  color: #1f1f1f;
+  font-size: 32rpx;
+  line-height: 44rpx;
+  font-weight: 600;
+}
+
+.expandedMeta,
+.expandedPrice {
+  display: block;
+  color: #717171;
+  font-size: 26rpx;
+  line-height: 36rpx;
+}
+
+.expandedMeta {
+  margin-top: 8rpx;
+}
+
+.expandedPrice {
+  margin-top: 6rpx;
+}

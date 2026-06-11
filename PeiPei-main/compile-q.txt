@@ -1,0 +1,31 @@
+﻿.\gradlew.bat : WARNING: A restricted method in java.lang.System has been called
+所在位置 C:\Users\郭聪聪\AppData\Local\Temp\ps-script-939c3ae2-4c78-4828-bfd4-28e4083dbf84.ps1:104 字符: 25
++ ...  D:\PeiPei; .\gradlew.bat :app:compileDevDebugKotlin --console=plain  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING: A rest...has been called:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+WARNING: java.lang.System::load has been called by net.rubygrapefruit.platform.internal.NativeLibraryLoader in an unnam
+ed module (file:/C:/Users/郭聪聪/.gradle/wrapper/dists/gradle-8.13-bin/ap7pdhvhnjtc6mxtzz89gkh0c/gradle-8.13/lib/native-pl
+atform-0.22-milestone-28.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+
+e: file:///D:/PeiPei/app/src/main/java/com/example/PeiPei/ui/components/ZoomableFitAsyncImage.kt:29:42 Unresolved refer
+ence: awaitPointerEvent
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:compileDevDebugKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCo
+mpilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 11m 18s

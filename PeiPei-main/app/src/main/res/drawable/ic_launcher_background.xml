@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!-- 文件说明：自适应图标底层矢量/形状背景。 -->
+<!-- 启动图标背景资源：定义 App Launcher 背景底色。 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#ff5a5f" />
+</shape>

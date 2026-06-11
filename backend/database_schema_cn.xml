@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<database name="Lulu_v2.db">
+  <description>数据库表字段中文说明</description>
+
+  <table name="users" chinese_name="用户表">
+    <column name="id" meaning="用户唯一标识" />
+    <column name="pei_pei_id" meaning="PeiPei号（用户可见唯一ID）" />
+    <column name="name" meaning="用户昵称" />
+    <column name="email" meaning="邮箱地址" />
+    <column name="phone_number" meaning="手机号" />
+    <column name="hashed_password" meaning="密码哈希值" />
+    <column name="photo_url" meaning="头像URL" />
+    <column name="remark_name" meaning="备注名" />
+    <column name="tags" meaning="标签列表（JSON）" />
+    <column name="favorite_service_ids" meaning="收藏服务ID列表（JSON）" />
+    <column name="signature" meaning="个性签名" />
+    <column name="memo" meaning="备忘录/备注信息" />
+    <column name="gender" meaning="性别" />
+    <column name="region" meaning="地区" />
+    <column name="is_phone_verified" meaning="手机号是否已验证" />
+    <column name="is_profile_completed" meaning="个人资料是否已完善" />
+    <column name="address_detail" meaning="详细地址" />
+    <column name="address_recipient_name" meaning="收件人姓名" />
+    <column name="address_phone_number" meaning="收件人电话" />
+    <column name="id_modification_count" meaning="ID修改次数" />
+    <column name="last_id_modification_year" meaning="上次修改ID的年份" />
+    <column name="created_at" meaning="创建时间戳（毫秒）" />
+    <column name="updated_at" meaning="更新时间戳（毫秒）" />
+    <column name="is_synced" meaning="是否已同步" />
+  </table>
+
+  <table name="services" chinese_name="服务表">
+    <column name="id" meaning="服务唯一标识" />
+    <column name="title" meaning="服务标题" />
+    <column name="description" meaning="服务描述" />
+    <column name="cover_image_url" meaning="封面图片URL" />
+    <column name="image_urls" meaning="服务图片URL列表（JSON）" />
+    <column name="location" meaning="服务地点" />
+    <column name="price_text" meaning="价格文案" />
+    <column name="service_mode" meaning="服务方式" />
+    <column name="service_time" meaning="服务时间" />
+    <column name="sync_to_square" meaning="是否同步到广场" />
+    <column name="participant_ids" meaning="参与者ID列表（JSON）" />
+    <column name="is_important" meaning="是否重要" />
+    <column name="creator_id" meaning="创建者用户ID" />
+    <column name="creator" meaning="创建者名称" />
+    <column name="created_at" meaning="创建时间戳（毫秒）" />
+    <column name="updated_at" meaning="更新时间戳（毫秒）" />
+    <column name="is_deleted" meaning="是否逻辑删除" />
+    <column name="is_synced" meaning="是否已同步" />
+  </table>
+
+  <table name="conversations" chinese_name="会话表">
+    <column name="id" meaning="会话唯一标识" />
+    <column name="type" meaning="会话类型（direct/group/service）" />
+    <column name="title" meaning="会话标题" />
+    <column name="owner_id" meaning="会话所有者用户ID" />
+    <column name="avatar_url" meaning="会话头像URL" />
+    <column name="participant_ids" meaning="参与者ID列表（JSON）" />
+    <column name="last_message_id" meaning="最后一条消息ID" />
+    <column name="last_message_preview" meaning="最后一条消息预览" />
+    <column name="last_message_at" meaning="最后消息时间戳（毫秒）" />
+    <column name="created_at" meaning="创建时间戳（毫秒）" />
+    <column name="updated_at" meaning="更新时间戳（毫秒）" />
+    <column name="is_deleted" meaning="是否逻辑删除" />
+  </table>
+
+  <table name="conversation_members" chinese_name="会话成员表">
+    <column name="id" meaning="会话成员记录唯一标识" />
+    <column name="conversation_id" meaning="会话ID" />
+    <column name="user_id" meaning="用户ID" />
+    <column name="role" meaning="成员角色" />
+    <column name="unread_count" meaning="未读消息数量" />
+    <column name="last_read_message_id" meaning="最后已读消息ID" />
+    <column name="last_read_at" meaning="最后已读时间戳（毫秒）" />
+    <column name="is_muted" meaning="是否免打扰" />
+    <column name="joined_at" meaning="加入会话时间戳（毫秒）" />
+    <column name="updated_at" meaning="更新时间戳（毫秒）" />
+  </table>
+
+  <table name="chat_messages" chinese_name="聊天消息表">
+    <column name="id" meaning="消息唯一标识" />
+    <column name="conversation_id" meaning="所属会话ID" />
+    <column name="sender_id" meaning="发送者用户ID" />
+    <column name="type" meaning="消息类型（text/image/file/system等）" />
+    <column name="content" meaning="消息文本内容" />
+    <column name="attachment_url" meaning="附件URL" />
+    <column name="attachment_name" meaning="附件名称" />
+    <column name="attachment_size" meaning="附件大小（字节）" />
+    <column name="object_key" meaning="对象存储键" />
+    <column name="extra" meaning="扩展信息（JSON）" />
+    <column name="client_message_id" meaning="客户端消息ID" />
+    <column name="status" meaning="消息状态" />
+    <column name="created_at" meaning="创建时间戳（毫秒）" />
+    <column name="updated_at" meaning="更新时间戳（毫秒）" />
+    <column name="is_deleted" meaning="是否逻辑删除" />
+  </table>
+</database>

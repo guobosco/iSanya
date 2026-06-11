@@ -1,0 +1,21 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  padding: 32rpx;
+}
+
+.card {
+  @include card-surface;
+  padding: 36rpx 32rpx;
+}
+
+.title {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.desc {
+  margin-top: 16rpx;
+  color: $color-text-secondary;
+  line-height: 1.7;
+}

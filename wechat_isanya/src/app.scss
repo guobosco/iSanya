@@ -1,0 +1,21 @@
+@use './styles/variables.scss' as *;
+
+page {
+  min-height: 100%;
+  background: linear-gradient(180deg, #f2f6ff 0%, $color-bg-page 220rpx);
+  color: $color-text-primary;
+  font-size: 28rpx;
+}
+
+view,
+text,
+button,
+input,
+scroll-view,
+image {
+  box-sizing: border-box;
+}
+
+button::after {
+  border: 0;
+}

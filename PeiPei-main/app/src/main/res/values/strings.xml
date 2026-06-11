@@ -1,0 +1,43 @@
+<!-- 文件说明：默认语言（中文）字符串资源。 -->
+<resources>
+    <string name="app_name">i三亚</string>
+
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+
+    <string name="data_synced">数据已同步</string>
+    <string name="syncing_data">正在刷新数据</string>
+    <string name="network_disconnected_message">当前无法连接网络，可检查网络设置是否正常。</string>
+    <string name="permission_required">需要权限</string>
+
+    <string name="today">今天</string>
+    <string name="tomorrow">明天</string>
+    <string name="publish_service">发布服务</string>
+    <string name="home_discover_empty_title">暂无内容</string>
+    <string name="home_discover_empty_subtitle">下拉刷新试试</string>
+    <string name="experience_per_guest_prefix">每位客人 </string>
+    <string name="experience_yuan_symbol">¥</string>
+    <string name="experience_price_from_suffix"> 起</string>
+    <string name="experience_explore_place">三亚</string>
+    <string name="experience_explore_title">探索%1$s的 %2$d 项体验</string>
+    <string name="experience_open_category_cd">查看该分类全部体验</string>
+    <string name="cancelled">已取消</string>
+
+    <string name="action_star">星标</string>
+    <string name="action_unstar">取消</string>
+
+    <string name="service_host_term">搭子</string>
+    <string name="service_provider_badge">服务主理人</string>
+
+    <string name="search_placeholder">搜索搭子、服务内容</string>
+    <string name="search_action">搜索</string>
+    <string name="search_history_title">历史记录</string>
+    <string name="search_history_clear">清空历史</string>
+    <string name="search_guess_title">猜你想搜</string>
+    <string name="search_more_options">更多</string>
+    <string name="search_refresh_suggestions">换一批</string>
+    <string name="search_camera_cd">扫码</string>
+    <string name="search_clear_query_cd">清除输入</string>
+    <string name="search_back_cd">返回</string>
+</resources>

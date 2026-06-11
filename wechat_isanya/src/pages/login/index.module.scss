@@ -1,0 +1,46 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.card {
+  @include card-surface;
+  padding: 40rpx 32rpx;
+}
+
+.title {
+  font-size: 38rpx;
+  font-weight: 600;
+}
+
+.desc {
+  margin-top: 16rpx;
+  color: $color-text-secondary;
+  line-height: 1.7;
+}
+
+.input {
+  margin-top: 24rpx;
+  height: 88rpx;
+  padding: 0 24rpx;
+  border-radius: 24rpx;
+  background: $color-bg-muted;
+}
+
+.button {
+  @include button-reset;
+  @include interactive;
+  margin-top: 24rpx;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-primary;
+  color: $color-text-inverse;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

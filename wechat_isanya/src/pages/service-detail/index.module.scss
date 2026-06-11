@@ -1,0 +1,466 @@
+.page {
+  min-height: 100vh;
+  background: #ffffff;
+  padding-bottom: calc(168rpx + env(safe-area-inset-bottom));
+}
+
+.hero {
+  position: relative;
+  height: 50vh;
+  min-height: 760rpx;
+  max-height: 1040rpx;
+  background: #efefef;
+}
+
+.heroSwiper,
+.heroSlide,
+.heroImage {
+  width: 100%;
+  height: 100%;
+}
+
+.heroMask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 180rpx;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+.heroActions {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 22rpx);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22rpx;
+  z-index: 3;
+}
+
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.actionButton {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 36rpx;
+  background: rgba(255, 255, 255, 0.94);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionIcon {
+  color: #222222;
+  font-size: 40rpx;
+  line-height: 40rpx;
+  font-weight: 600;
+}
+
+.actionIconActive {
+  color: #ff5a5f;
+}
+
+.heroPager {
+  position: absolute;
+  right: 22rpx;
+  bottom: 114rpx;
+  z-index: 3;
+  padding: 8rpx 16rpx;
+  border-radius: 16rpx;
+  background: rgba(0, 0, 0, 0.45);
+  color: #ffffff;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
+.heroDots {
+  position: absolute;
+  left: 50%;
+  bottom: 48rpx;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  z-index: 3;
+}
+
+.heroDot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 6rpx;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.heroDotActive {
+  width: 14rpx;
+  height: 14rpx;
+  background: #ff3b30;
+}
+
+.panel {
+  position: relative;
+  margin-top: -44rpx;
+  border-radius: 36rpx 36rpx 0 0;
+  background: #ffffff;
+  padding: 24rpx 32rpx 0;
+  z-index: 2;
+}
+
+.title {
+  display: block;
+  color: #111111;
+  text-align: center;
+  font-size: 48rpx;
+  font-weight: 700;
+  line-height: 62rpx;
+}
+
+.meta {
+  display: block;
+  margin-top: 12rpx;
+  color: #6f6f6f;
+  text-align: center;
+  font-size: 26rpx;
+  line-height: 36rpx;
+}
+
+.tagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.tagItem {
+  width: calc(50% - 6rpx);
+  min-height: 72rpx;
+  border-radius: 20rpx;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20rpx;
+  box-sizing: border-box;
+}
+
+.tagText {
+  color: #3b3b3b;
+  font-size: 25rpx;
+  line-height: 34rpx;
+}
+
+.hostRow {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+}
+
+.avatarWrap {
+  position: relative;
+  width: 88rpx;
+  height: 88rpx;
+}
+
+.avatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: linear-gradient(145deg, #ffd5e1 0%, #ffeef3 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatarText {
+  color: #d91c5c;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.verifiedBadge {
+  position: absolute;
+  right: -2rpx;
+  bottom: -2rpx;
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 14rpx;
+  background: #e0115f;
+  color: #ffffff;
+  font-size: 18rpx;
+  line-height: 28rpx;
+  text-align: center;
+}
+
+.hostInfo {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+}
+
+.hostName {
+  display: block;
+  color: #161616;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.hostMeta {
+  display: block;
+  margin-top: 4rpx;
+  color: #7f7f7f;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.chatButton {
+  flex-shrink: 0;
+  height: 66rpx;
+  padding: 0 26rpx;
+  border-radius: 33rpx;
+  background: rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chatButtonText {
+  color: #e0115f;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.divider {
+  margin-top: 28rpx;
+  height: 2rpx;
+  background: #f0f0f0;
+}
+
+.section {
+  margin-top: 32rpx;
+}
+
+.sectionTitle {
+  display: block;
+  color: #141414;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 46rpx;
+}
+
+.sectionText {
+  display: block;
+  margin-top: 14rpx;
+  color: #444444;
+  font-size: 27rpx;
+  line-height: 46rpx;
+}
+
+.planList {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.planCard {
+  border-radius: 28rpx;
+  border: 2rpx solid #eeeeee;
+  background: #fbfbfb;
+  padding: 24rpx;
+}
+
+.planCardActive {
+  border-color: rgba(224, 17, 95, 0.24);
+  background: #fff7fa;
+}
+
+.planHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.planTitle {
+  display: block;
+  color: #1b1b1b;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 42rpx;
+}
+
+.planSubtitle {
+  display: block;
+  margin-top: 6rpx;
+  color: #7a7a7a;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.planPriceWrap {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.planPrice {
+  display: block;
+  color: #1f1f1f;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+}
+
+.planDuration {
+  display: block;
+  margin-top: 4rpx;
+  color: #8b8b8b;
+  font-size: 23rpx;
+  line-height: 30rpx;
+}
+
+.planDescription {
+  display: block;
+  margin-top: 14rpx;
+  color: #4d4d4d;
+  font-size: 25rpx;
+  line-height: 38rpx;
+}
+
+.noteList {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  margin-top: 18rpx;
+}
+
+.noteRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+}
+
+.noteDot {
+  width: 10rpx;
+  height: 10rpx;
+  margin-top: 16rpx;
+  border-radius: 5rpx;
+  background: #e0115f;
+  flex-shrink: 0;
+}
+
+.noteText,
+.locationText {
+  color: #4b4b4b;
+  font-size: 26rpx;
+  line-height: 40rpx;
+}
+
+.locationText {
+  display: block;
+  margin-top: 18rpx;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+  margin-top: 18rpx;
+}
+
+.reviewCard {
+  padding: 24rpx;
+  border-radius: 28rpx;
+  background: #fafafa;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.reviewUser {
+  color: #222222;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 38rpx;
+}
+
+.reviewDate {
+  color: #8f8f8f;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
+.reviewContent {
+  display: block;
+  margin-top: 10rpx;
+  color: #444444;
+  font-size: 25rpx;
+  line-height: 38rpx;
+}
+
+.bottomSpacer {
+  height: 44rpx;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.06);
+  z-index: 10;
+}
+
+.bottomPriceWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.bottomPrice {
+  display: block;
+  color: #171717;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 44rpx;
+}
+
+.bottomPriceMeta {
+  display: block;
+  margin-top: 4rpx;
+  color: #8a8a8a;
+  font-size: 23rpx;
+  line-height: 30rpx;
+}
+
+.bookButton {
+  width: 280rpx;
+  height: 88rpx;
+  border-radius: 44rpx;
+  background: #e0115f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bookButtonText {
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 600;
+}
