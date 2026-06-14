@@ -78,6 +78,28 @@ class FavoriteServicesUpdateRequest(BaseModel):
 class FavoriteServicesResponse(BaseModel):
     service_ids: List[str] = Field(default_factory=list)
 
+
+class WishlistGroupPayload(BaseModel):
+    name: str = ""
+    service_ids: List[str] = Field(default_factory=list)
+
+    @field_validator("service_ids", mode="before")
+    @classmethod
+    def normalize_group_service_ids(cls, value):
+        if value is None:
+            return []
+        return value
+
+
+class WishlistProfileUpdateRequest(BaseModel):
+    service_ids: List[str] = Field(default_factory=list)
+    groups: List[WishlistGroupPayload] = Field(default_factory=list)
+
+
+class WishlistProfileResponse(BaseModel):
+    service_ids: List[str] = Field(default_factory=list)
+    groups: List[WishlistGroupPayload] = Field(default_factory=list)
+
 class User(UserBase):
     """
     返回给客户端的用户信息 Schema (Response Model)
@@ -209,6 +231,60 @@ class ServiceCreate(ServiceBase):
 class Service(ServiceBase):
     id: str
     creator_id: str
+    created_at: int
+    updated_at: int
+
+    class Config:
+        from_attributes = True
+
+
+class ExperienceBase(BaseModel):
+    title: str = ""
+    description: str = ""
+    cover_image_url: str = ""
+    image_urls: List[str] = Field(default_factory=list)
+    location: str = ""
+    price_text: str = ""
+    price_basis_text: str = ""
+    category: str = "其他体验"
+    duration_text: str = ""
+    badge_text: str = ""
+    tags: List[str] = Field(default_factory=list)
+    host_name: str = ""
+    is_deleted: bool = False
+    is_synced: bool = True
+
+    @field_validator("image_urls", "tags", mode="before")
+    @classmethod
+    def normalize_experience_list_fields(cls, value):
+        if value is None:
+            return []
+        return value
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def none_experience_category(cls, value):
+        if value is None:
+            return "其他体验"
+        text = str(value).strip()
+        return "其他体验" if not text else text
+
+    @field_validator("price_basis_text", "duration_text", "badge_text", mode="before")
+    @classmethod
+    def normalize_experience_text_fields(cls, value):
+        return "" if value is None else str(value)
+
+
+class ExperienceCreate(ExperienceBase):
+    id: str
+    host_id: str
+    created_at: int
+    updated_at: int
+
+
+class Experience(ExperienceBase):
+    id: str
+    host_id: str
     created_at: int
     updated_at: int
 

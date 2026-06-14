@@ -76,6 +76,7 @@ import com.example.Lulu.ui.components.FeiLingTopSyncIndicator
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.ui.util.PullRefreshTokens
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -639,6 +640,17 @@ private enum class InquiryType {
 
 private fun formatConversationTime(timestamp: Long): String {
     if (timestamp <= 0L) return ""
-    val formatter = SimpleDateFormat("yy/M/d", Locale.getDefault())
-    return formatter.format(Date(timestamp))
+    val locale = Locale.SIMPLIFIED_CHINESE
+    val date = Date(timestamp)
+    val now = Calendar.getInstance()
+    val messageTime = Calendar.getInstance().apply { time = date }
+
+    val pattern = when {
+        now.get(Calendar.YEAR) == messageTime.get(Calendar.YEAR) &&
+            now.get(Calendar.DAY_OF_YEAR) == messageTime.get(Calendar.DAY_OF_YEAR) -> "HH:mm"
+        now.get(Calendar.YEAR) == messageTime.get(Calendar.YEAR) -> "M月d日"
+        else -> "yyyy年M月d日"
+    }
+
+    return SimpleDateFormat(pattern, locale).format(date)
 }

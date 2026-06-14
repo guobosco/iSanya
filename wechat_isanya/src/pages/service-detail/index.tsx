@@ -39,12 +39,15 @@ type ServiceDetail = {
 
 declare var process: any;
 
+const apiBaseUrl = (() => {
+  const baseStr = process.env.TARO_APP_API_BASE_URL || '';
+  return baseStr.replace(/^['"](.*)['"]$/, '$1').replace(/\/$/, '');
+})();
+
 const resolveMediaUrl = (url?: string) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const baseStr = process.env.TARO_APP_API_BASE_URL || '';
-  const base = baseStr.replace(/^['"](.*)['"]$/, '$1');
-  return `${base.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
+  return `${apiBaseUrl}/${url.replace(/^\//, '')}`;
 };
 
 function ServiceDetailPage() {
@@ -57,7 +60,7 @@ function ServiceDetailPage() {
   useLoad(() => {
     if (!serviceId) return;
     Taro.request({
-      url: `${process.env.TARO_APP_API_BASE_URL}/services/${serviceId}`,
+      url: `${apiBaseUrl}/services/${serviceId}`,
       method: 'GET',
       success: (res: any) => {
         if (res.statusCode === 200) {

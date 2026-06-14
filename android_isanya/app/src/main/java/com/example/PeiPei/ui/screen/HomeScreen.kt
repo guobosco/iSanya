@@ -514,7 +514,13 @@ fun HomeScreen(
                                                 resolveWishlistCategoryGroupName(event.category)
                                             val result =
                                                 AppDataStore.addFavoriteServiceToGroup(event.id, group)
-                                            if (result.favoriteIds.contains(event.id)) {
+                                            if (result.syncFailed) {
+                                                Toast.makeText(
+                                                    context,
+                                                    "加入心愿单失败，请重试",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            } else if (result.favoriteIds.contains(event.id)) {
                                                 Toast.makeText(context, "已加入心愿单", Toast.LENGTH_SHORT)
                                                     .show()
                                             } else {
@@ -767,7 +773,9 @@ fun HomeScreen(
                     togglingFavoriteIds = togglingFavoriteIds + serviceId
                     try {
                         val result = AppDataStore.toggleFavoriteService(serviceId)
-                        val toastText = if (result.favoriteIds.contains(serviceId)) {
+                        val toastText = if (result.syncFailed) {
+                            "心愿单同步失败，请重试"
+                        } else if (result.favoriteIds.contains(serviceId)) {
                             "已加入心愿单"
                         } else {
                             "已移出心愿单"
@@ -787,7 +795,9 @@ fun HomeScreen(
                         )
                         val result =
                             AppDataStore.addFavoriteServiceToGroup(serviceId, group)
-                        val toastText = if (result.favoriteIds.contains(serviceId)) {
+                        val toastText = if (result.syncFailed) {
+                            "加入心愿单失败，请重试"
+                        } else if (result.favoriteIds.contains(serviceId)) {
                             "已加入心愿单"
                         } else {
                             "加入心愿单失败，请重试"
@@ -863,9 +873,9 @@ fun HomeScreen(
                             modifier = Modifier.fillMaxSize(),
                             verticalListState = experienceVerticalListState,
                             refreshNonce = experienceRefreshNonce,
-                            onOpenCategoryFeed = { categoryIndex ->
+                            onOpenCategoryFeed = { categoryTitle ->
                                 serviceDetailNav.navigate(
-                                    Screen.ExperienceCategoryFeed.createRoute(categoryIndex)
+                                    Screen.ExperienceCategoryFeed.createRoute(categoryTitle)
                                 )
                             },
                             onOpenExperienceDetail = { item ->
@@ -907,7 +917,9 @@ fun HomeScreen(
                                                 togglingFavoriteIds = togglingFavoriteIds + item.event.id
                                                 try {
                                                     val result = AppDataStore.toggleFavoriteService(item.event.id)
-                                                    val toastText = if (result.favoriteIds.contains(item.event.id)) {
+                                                    val toastText = if (result.syncFailed) {
+                                                        "心愿单同步失败，请重试"
+                                                    } else if (result.favoriteIds.contains(item.event.id)) {
                                                         "已加入心愿单"
                                                     } else {
                                                         "已移出心愿单"
@@ -930,7 +942,9 @@ fun HomeScreen(
                                                         group
                                                     )
                                                     val toastText =
-                                                        if (result.favoriteIds.contains(item.event.id)) {
+                                                        if (result.syncFailed) {
+                                                            "加入心愿单失败，请重试"
+                                                        } else if (result.favoriteIds.contains(item.event.id)) {
                                                             "已加入心愿单"
                                                         } else {
                                                             "加入心愿单失败，请重试"

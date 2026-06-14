@@ -14,6 +14,7 @@ import com.example.Lulu.data.model.ChatReadRequest
 import com.example.Lulu.data.model.ChatUploadResponse
 import com.example.Lulu.data.model.ConversationListItem
 import com.example.Lulu.data.model.CreateDirectConversationResponse
+import com.example.Lulu.data.model.Experience
 import com.example.Lulu.data.model.Service
 import retrofit2.http.*
 import okhttp3.MultipartBody
@@ -31,6 +32,16 @@ data class TokenResponse(
 
 data class FavoriteServicesPayload(
     @SerializedName("service_ids") val serviceIds: List<String>
+)
+
+data class WishlistGroupPayload(
+    val name: String,
+    @SerializedName("service_ids") val serviceIds: List<String>
+)
+
+data class WishlistProfilePayload(
+    @SerializedName("service_ids") val serviceIds: List<String>,
+    val groups: List<WishlistGroupPayload>
 )
 
 data class RegisterRequest(
@@ -72,6 +83,12 @@ interface ApiService {
 
     @PUT("me/wishlist/services")
     suspend fun updateMyFavoriteServices(@Body body: FavoriteServicesPayload): FavoriteServicesPayload
+
+    @GET("me/wishlist/profile")
+    suspend fun getMyWishlistProfile(): WishlistProfilePayload
+
+    @PUT("me/wishlist/profile")
+    suspend fun updateMyWishlistProfile(@Body body: WishlistProfilePayload): WishlistProfilePayload
 
     @PUT("users/{userId}")
     suspend fun updateUser(@Path("userId") userId: String, @Body user: User): User
@@ -153,5 +170,15 @@ interface ApiService {
 
     @DELETE("services/{id}")
     suspend fun deleteService(@Path("id") id: String): Service
+
+    @GET("experiences/discovery")
+    suspend fun getDiscoveryExperiences(
+        @Query("skip") skip: Int = 0,
+        @Query("limit") limit: Int = 200,
+        @Query("updated_after") updatedAfter: Long? = null
+    ): List<Experience>
+
+    @GET("experiences/{id}")
+    suspend fun getExperienceById(@Path("id") id: String): Experience
 
 }

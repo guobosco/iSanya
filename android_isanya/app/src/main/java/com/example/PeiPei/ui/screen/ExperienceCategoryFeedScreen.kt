@@ -1,6 +1,4 @@
-// 文件说明：体验分类「信息瀑布流」— 纵向列表，左图右文，支持下滑加载更多。
-
-@file:OptIn(kotlinx.coroutines.FlowPreview::class)
+// 文件说明：体验分类流 — 使用真实体验数据按分类展示。
 
 package com.example.Lulu.ui.screen
 
@@ -16,14 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,12 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,60 +43,37 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.ui.navigation.Screen
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.Lulu.R
-import com.example.Lulu.data.model.experienceCategorySeeds
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
+import com.example.Lulu.data.model.Experience
+import com.example.Lulu.data.remote.RetrofitClient
+import com.example.Lulu.ui.navigation.Screen
 import androidx.compose.ui.platform.LocalContext
-
-private const val FEED_PAGE_SIZE = 12
-private const val FEED_MAX_ITEMS = 300
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private val ExperienceFeedPageWhite = Color(0xFFFFFFFF)
+
+private suspend fun loadCategoryExperiences(categoryTitle: String): List<ExperienceItemUi> = withContext(Dispatchers.IO) {
+    runCatching {
+        RetrofitClient.apiService.getDiscoveryExperiences(limit = 200)
+            .filter { !it.isDeleted && normalizeExperienceCategory(it.category) == categoryTitle }
+            .sortedWith(compareByDescending<Experience> { it.updatedAt }.thenByDescending { it.createdAt })
+            .map { it.toUiModel() }
+    }.getOrElse { emptyList() }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExperienceCategoryFeedScreen(
     navController: NavController,
-    categoryIndex: Int,
+    categoryTitle: String,
 ) {
-    val safeIndex = categoryIndex.coerceIn(0, experienceCategorySeeds.lastIndex)
     val listState = rememberLazyListState()
-    var items by remember(safeIndex) {
-        mutableStateOf(
-            buildExperienceItems("feed_$safeIndex", safeIndex, 0, FEED_PAGE_SIZE),
-        )
+    val items by produceState<List<ExperienceItemUi>>(initialValue = emptyList(), key1 = categoryTitle) {
+        value = loadCategoryExperiences(categoryTitle)
     }
-    var loadBusy by remember(safeIndex) { mutableStateOf(false) }
-
-    LaunchedEffect(listState, items.size, loadBusy, safeIndex) {
-        snapshotFlow {
-            val info = listState.layoutInfo
-            if (info.visibleItemsInfo.isEmpty()) return@snapshotFlow false
-            val last = info.visibleItemsInfo.last().index
-            val total = info.totalItemsCount
-            last >= total - 3 && items.size < FEED_MAX_ITEMS
-        }
-            .distinctUntilChanged()
-            .filter { it }
-            .debounce(100)
-            .collect {
-                if (loadBusy) return@collect
-                loadBusy = true
-                val start = items.size
-                val add = FEED_PAGE_SIZE.coerceAtMost(FEED_MAX_ITEMS - start)
-                if (add > 0) {
-                    items = items + buildExperienceItems("feed_$safeIndex", safeIndex, start, add)
-                }
-                loadBusy = false
-            }
-    }
-
-    val toolbarTitle = experienceCategorySeeds[safeIndex].title
 
     Scaffold(
         modifier = Modifier
@@ -116,7 +84,7 @@ fun ExperienceCategoryFeedScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = toolbarTitle,
+                        text = categoryTitle,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Bold,
@@ -140,40 +108,43 @@ fun ExperienceCategoryFeedScreen(
             )
         },
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(ExperienceFeedPageWhite),
-            state = listState,
-        ) {
-            items(
-                count = items.size,
-                key = { items[it].id },
-            ) { index ->
-                ExperienceFeedListRow(
-                    item = items[index],
-                    onOpenDetail = {
-                        navController.navigate(Screen.ExperienceDetail.createRoute(items[index].id))
-                    },
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "当前分类暂无真实体验数据",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 14.sp,
                 )
-                if (index < items.lastIndex) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
-                    )
-                }
             }
-            if (loadBusy && items.size < FEED_MAX_ITEMS) {
-                item(key = "feed_loading") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(ExperienceFeedPageWhite),
+                state = listState,
+            ) {
+                items(
+                    items = items,
+                    key = { it.id },
+                ) { item ->
+                    ExperienceFeedListRow(
+                        item = item,
+                        onOpenDetail = {
+                            navController.navigate(Screen.ExperienceDetail.createRoute(item.id))
+                        },
+                    )
+                    if (item.id != items.lastOrNull()?.id) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+                        )
                     }
                 }
             }
@@ -187,7 +158,6 @@ private fun ExperienceFeedListRow(
     onOpenDetail: () -> Unit,
 ) {
     val context = LocalContext.current
-    var favorited by remember(item.id) { mutableStateOf(false) }
     val metaColor = MaterialTheme.colorScheme.onSurfaceVariant
     val boldColor = MaterialTheme.colorScheme.onBackground
     val thumbSize = 100.dp
@@ -232,23 +202,6 @@ private fun ExperienceFeedListRow(
                     fontWeight = FontWeight.Medium,
                 )
             }
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.92f))
-                    .clickable { favorited = !favorited },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = if (favorited) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = null,
-                    tint = if (favorited) Color(0xFFFF5A5F) else Color(0xFF333333),
-                    modifier = Modifier.size(16.dp),
-                )
-            }
         }
         Column(
             modifier = Modifier
@@ -275,26 +228,14 @@ private fun ExperienceFeedListRow(
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(R.string.experience_per_guest_prefix),
-                    color = metaColor,
-                    fontSize = 12.sp,
-                )
-                Text(
-                    text = stringResource(R.string.experience_yuan_symbol),
+                    text = if (item.priceFromYuan > 0) {
+                        "${stringResource(R.string.experience_per_guest_prefix)} ${stringResource(R.string.experience_yuan_symbol)}${item.priceFromYuan}${stringResource(R.string.experience_price_from_suffix)}"
+                    } else {
+                        "价格待定"
+                    },
                     color = boldColor,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = item.priceFromYuan.toString(),
-                    color = boldColor,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = stringResource(R.string.experience_price_from_suffix),
-                    color = metaColor,
-                    fontSize = 12.sp,
                 )
             }
         }

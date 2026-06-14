@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material.icons.outlined.Pool
 import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.Star
@@ -127,6 +128,8 @@ fun iconVectorForDetailTagLabel(text: String): ImageVector {
         c.contains("按摩") || c.contains("推拿") || c.contains("SPA") || lower.contains("spa") ->
             Icons.Outlined.Spa
         c.contains("化妆") || c.contains("妆造") -> Icons.Outlined.FaceRetouchingNatural
+        c.contains("教学") || c.contains("课程") || c.contains("陪练") || c.contains("技能") ->
+            Icons.Outlined.School
         c.contains("DJ") || c.contains("打碟") -> Icons.Outlined.GraphicEq
         c.contains("气氛") || c.contains("暖场") || c.contains("派对") -> Icons.Outlined.Celebration
         c.contains("陪游") || c.contains("向导") || c.contains("地陪") || c.contains("导览") ->

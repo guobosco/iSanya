@@ -46,7 +46,6 @@ import com.example.Lulu.ui.screen.SplashScreen
 import com.example.Lulu.ui.screen.SystemPermissionScreen
 import com.example.Lulu.ui.screen.ExperienceCategoryFeedScreen
 import com.example.Lulu.ui.screen.ExperienceDetailScreen
-import com.example.Lulu.data.model.experienceCategorySeeds
 import com.example.Lulu.ui.screen.RealNameVerificationScreen
 import com.example.Lulu.ui.screen.MyIncomeScreen
 import com.example.Lulu.ui.screen.HostServiceOrderDetailScreen
@@ -164,14 +163,13 @@ fun AppNavHost(intentState: Intent? = null) {
                 composable(
                     route = Screen.ExperienceCategoryFeed.route,
                     arguments = listOf(
-                        navArgument("categoryIndex") { type = NavType.IntType },
+                        navArgument("categoryTitle") { type = NavType.StringType },
                     ),
                 ) { feedEntry ->
-                    val raw = feedEntry.arguments?.getInt("categoryIndex") ?: 0
-                    val idx = raw.coerceIn(0, experienceCategorySeeds.lastIndex)
+                    val categoryTitle = feedEntry.arguments?.getString("categoryTitle").orEmpty()
                     ExperienceCategoryFeedScreen(
                         navController = mainShellNavController,
-                        categoryIndex = idx,
+                        categoryTitle = categoryTitle,
                     )
                 }
                 composable(
@@ -473,8 +471,8 @@ sealed class Screen(val route: String) {
     object UserInfo : Screen("user_info")
     object RealNameVerification : Screen("real_name_verification")
     object Search : Screen("search")
-    object ExperienceCategoryFeed : Screen("experience_category_feed/{categoryIndex}") {
-        fun createRoute(categoryIndex: Int) = "experience_category_feed/$categoryIndex"
+    object ExperienceCategoryFeed : Screen("experience_category_feed/{categoryTitle}") {
+        fun createRoute(categoryTitle: String) = "experience_category_feed/${android.net.Uri.encode(categoryTitle)}"
     }
     object ExperienceDetail : Screen("experience_detail/{experienceId}") {
         fun createRoute(experienceId: String) = "experience_detail/${android.net.Uri.encode(experienceId)}"

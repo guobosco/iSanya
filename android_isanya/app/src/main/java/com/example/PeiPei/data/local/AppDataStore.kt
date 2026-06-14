@@ -35,8 +35,6 @@ import java.time.LocalDate
 
 object AppDataStore {
     const val DEFAULT_WISHLIST_GROUP = "默认分组"
-    private const val WISHLIST_GROUPS_KEY = "wishlist_groups"
-    private const val WISHLIST_GROUP_MAPPING_KEY = "wishlist_group_mapping"
 
     private var repository: LuluRepository? = null
 
@@ -114,7 +112,6 @@ object AppDataStore {
 
     fun initialize(repo: LuluRepository) {
         repository = repo
-        loadWishlistGroupSettings()
 
         scope.launch {
             repo.currentUser.collect { user ->
@@ -122,6 +119,16 @@ object AppDataStore {
                     _currentUser.value = user
                     _favoriteServiceIds.value = user.favoriteServiceIds.toSet()
                     cleanupFavoriteGroupMappingForCurrentFavorites()
+                }
+            }
+        }
+        scope.launch {
+            repo.currentUserIdFlow.collect { userId ->
+                if (userId.isBlank()) {
+                    _wishlistGroups.value = listOf(DEFAULT_WISHLIST_GROUP)
+                    _favoriteServiceGroups.value = emptyMap()
+                } else {
+                    refreshWishlistProfileFromRemote()
                 }
             }
         }
@@ -294,16 +301,13 @@ object AppDataStore {
                 syncFailed = true,
                 errorType = LuluRepository.FavoriteSyncError.SERVER
             )
-        _favoriteServiceIds.value = result.favoriteIds
-        if (result.favoriteIds.contains(id)) {
-            val existingGroup = _favoriteServiceGroups.value[id]
-            val normalizedGroup = normalizeGroupName(existingGroup ?: DEFAULT_WISHLIST_GROUP)
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value + (id to normalizedGroup)
-        } else {
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value - id
+        if (result.syncFailed) {
+            _favoriteServiceIds.value = result.favoriteIds
+            cleanupFavoriteGroupMappingForCurrentFavorites()
+            return result
         }
-        cleanupFavoriteGroupMappingForCurrentFavorites()
-        persistWishlistGroupSettings()
+        _favoriteServiceIds.value = result.favoriteIds
+        refreshWishlistProfileFromRemote()
         return result
     }
 
@@ -314,16 +318,13 @@ object AppDataStore {
                 syncFailed = true,
                 errorType = LuluRepository.FavoriteSyncError.SERVER
             )
-        _favoriteServiceIds.value = result.favoriteIds
-        if (result.favoriteIds.contains(id)) {
-            val existingGroup = _favoriteServiceGroups.value[id]
-            val normalizedGroup = normalizeGroupName(existingGroup ?: DEFAULT_WISHLIST_GROUP)
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value + (id to normalizedGroup)
-        } else {
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value - id
+        if (result.syncFailed) {
+            _favoriteServiceIds.value = result.favoriteIds
+            cleanupFavoriteGroupMappingForCurrentFavorites()
+            return result
         }
-        cleanupFavoriteGroupMappingForCurrentFavorites()
-        persistWishlistGroupSettings()
+        _favoriteServiceIds.value = result.favoriteIds
+        refreshWishlistProfileFromRemote()
         return result
     }
 
@@ -332,7 +333,6 @@ object AppDataStore {
         groupName: String
     ): LuluRepository.FavoriteToggleResult {
         val normalizedGroup = normalizeGroupName(groupName)
-        ensureGroupExists(normalizedGroup)
         val isAlreadyFavorite = _favoriteServiceIds.value.contains(serviceId)
         val result = if (isAlreadyFavorite) {
             LuluRepository.FavoriteToggleResult(
@@ -343,31 +343,53 @@ object AppDataStore {
         } else {
             addFavoriteService(serviceId)
         }
-        if (result.favoriteIds.contains(serviceId)) {
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value + (serviceId to normalizedGroup)
-        } else {
-            _favoriteServiceGroups.value = _favoriteServiceGroups.value - serviceId
+        if (result.syncFailed || result.favoriteIds.contains(serviceId).not()) {
+            _favoriteServiceIds.value = result.favoriteIds
+            cleanupFavoriteGroupMappingForCurrentFavorites()
+            return result
         }
-        cleanupFavoriteGroupMappingForCurrentFavorites()
-        persistWishlistGroupSettings()
-        return result
+        val updatedGroups = _wishlistGroups.value.let { groups ->
+            if (groups.any { it.equals(normalizedGroup, ignoreCase = true) }) groups
+            else groups + normalizedGroup
+        }
+        val updatedMapping = _favoriteServiceGroups.value + (serviceId to normalizedGroup)
+        val remoteState = repository?.updateWishlistProfile(
+            favoriteIds = result.favoriteIds,
+            groups = updatedGroups,
+            favoriteServiceGroups = updatedMapping
+        )
+        if (remoteState != null) {
+            applyWishlistProfileState(remoteState)
+            return result
+        } else {
+            refreshWishlistProfileFromRemote()
+            return LuluRepository.FavoriteToggleResult(
+                favoriteIds = _favoriteServiceIds.value,
+                syncFailed = true,
+                errorType = LuluRepository.FavoriteSyncError.SERVER
+            )
+        }
     }
 
     fun getFavoriteGroupForService(serviceId: String): String {
         return normalizeGroupName(_favoriteServiceGroups.value[serviceId])
     }
 
-    fun createWishlistGroup(groupName: String): Boolean {
+    suspend fun createWishlistGroup(groupName: String): Boolean {
         val normalized = normalizeGroupName(groupName)
         if (_wishlistGroups.value.any { it.equals(normalized, ignoreCase = true) }) {
             return false
         }
-        _wishlistGroups.value = (_wishlistGroups.value + normalized).distinct()
-        persistWishlistGroupSettings()
+        val remoteState = repository?.updateWishlistProfile(
+            favoriteIds = _favoriteServiceIds.value,
+            groups = (_wishlistGroups.value + normalized).distinct(),
+            favoriteServiceGroups = _favoriteServiceGroups.value
+        ) ?: return false
+        applyWishlistProfileState(remoteState)
         return true
     }
 
-    fun renameWishlistGroup(oldName: String, newName: String): Boolean {
+    suspend fun renameWishlistGroup(oldName: String, newName: String): Boolean {
         val oldNormalized = normalizeGroupName(oldName)
         val newNormalized = normalizeGroupName(newName)
         if (oldNormalized == DEFAULT_WISHLIST_GROUP) return false
@@ -375,23 +397,33 @@ object AppDataStore {
         if (_wishlistGroups.value.any { it.equals(newNormalized, ignoreCase = true) && it != oldNormalized }) {
             return false
         }
-        _wishlistGroups.value = _wishlistGroups.value.map { if (it == oldNormalized) newNormalized else it }
-        _favoriteServiceGroups.value = _favoriteServiceGroups.value.mapValues { (_, value) ->
+        val updatedGroups = _wishlistGroups.value.map { if (it == oldNormalized) newNormalized else it }
+        val updatedMapping = _favoriteServiceGroups.value.mapValues { (_, value) ->
             if (value == oldNormalized) newNormalized else value
         }
-        persistWishlistGroupSettings()
+        val remoteState = repository?.updateWishlistProfile(
+            favoriteIds = _favoriteServiceIds.value,
+            groups = updatedGroups,
+            favoriteServiceGroups = updatedMapping
+        ) ?: return false
+        applyWishlistProfileState(remoteState)
         return true
     }
 
-    fun deleteWishlistGroup(groupName: String): Boolean {
+    suspend fun deleteWishlistGroup(groupName: String): Boolean {
         val normalized = normalizeGroupName(groupName)
         if (normalized == DEFAULT_WISHLIST_GROUP) return false
         if (_wishlistGroups.value.none { it == normalized }) return false
-        _wishlistGroups.value = _wishlistGroups.value.filter { it != normalized }
-        _favoriteServiceGroups.value = _favoriteServiceGroups.value.mapValues { (_, value) ->
+        val updatedGroups = _wishlistGroups.value.filter { it != normalized }
+        val updatedMapping = _favoriteServiceGroups.value.mapValues { (_, value) ->
             if (value == normalized) DEFAULT_WISHLIST_GROUP else value
         }
-        persistWishlistGroupSettings()
+        val remoteState = repository?.updateWishlistProfile(
+            favoriteIds = _favoriteServiceIds.value,
+            groups = updatedGroups,
+            favoriteServiceGroups = updatedMapping
+        ) ?: return false
+        applyWishlistProfileState(remoteState)
         return true
     }
 
@@ -502,12 +534,6 @@ object AppDataStore {
         scope.launch { repository?.logout() }
     }
 
-    private fun ensureGroupExists(groupName: String) {
-        if (_wishlistGroups.value.none { it.equals(groupName, ignoreCase = true) }) {
-            _wishlistGroups.value = (_wishlistGroups.value + groupName).distinct()
-        }
-    }
-
     private fun normalizeGroupName(groupName: String?): String {
         val normalized = groupName?.trim().orEmpty()
         if (normalized.isBlank()) return DEFAULT_WISHLIST_GROUP
@@ -525,53 +551,17 @@ object AppDataStore {
             .mapValues { (_, group) -> normalizeGroupName(group) }
     }
 
-    private fun loadWishlistGroupSettings() {
-        val prefs = repository?.getSharedPreferences() ?: return
-        runCatching {
-            val groupJson = prefs.getString(WISHLIST_GROUPS_KEY, null).orEmpty()
-            val mappingJson = prefs.getString(WISHLIST_GROUP_MAPPING_KEY, null).orEmpty()
-            val loadedGroups = mutableListOf<String>()
-            if (groupJson.isNotBlank()) {
-                val array = JSONArray(groupJson)
-                for (i in 0 until array.length()) {
-                    loadedGroups += normalizeGroupName(array.optString(i))
-                }
-            }
-            val finalGroups = (loadedGroups + DEFAULT_WISHLIST_GROUP).distinct()
-            _wishlistGroups.value = finalGroups
-
-            if (mappingJson.isNotBlank()) {
-                val jsonObject = JSONObject(mappingJson)
-                val keys = jsonObject.keys()
-                val loadedMapping = mutableMapOf<String, String>()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val value = normalizeGroupName(jsonObject.optString(key))
-                    loadedMapping[key] = value
-                    ensureGroupExists(value)
-                }
-                _favoriteServiceGroups.value = loadedMapping
-            } else {
-                _favoriteServiceGroups.value = emptyMap()
-            }
-        }.onFailure {
-            _wishlistGroups.value = listOf(DEFAULT_WISHLIST_GROUP)
-            _favoriteServiceGroups.value = emptyMap()
-        }
+    suspend fun refreshWishlistProfileFromRemote() {
+        val remoteState = repository?.refreshWishlistProfile() ?: return
+        applyWishlistProfileState(remoteState)
     }
 
-    private fun persistWishlistGroupSettings() {
-        val prefs = repository?.getSharedPreferences() ?: return
-        runCatching {
-            val groupsJson = JSONArray(_wishlistGroups.value).toString()
-            val mappingObject = JSONObject()
-            _favoriteServiceGroups.value.forEach { (serviceId, groupName) ->
-                mappingObject.put(serviceId, normalizeGroupName(groupName))
-            }
-            prefs.edit()
-                .putString(WISHLIST_GROUPS_KEY, groupsJson)
-                .putString(WISHLIST_GROUP_MAPPING_KEY, mappingObject.toString())
-                .apply()
+    private fun applyWishlistProfileState(state: LuluRepository.WishlistProfileState) {
+        _favoriteServiceIds.value = state.favoriteIds
+        _wishlistGroups.value = (listOf(DEFAULT_WISHLIST_GROUP) + state.groups.map(::normalizeGroupName)).distinct()
+        _favoriteServiceGroups.value = state.favoriteServiceGroups.mapValues { (_, group) ->
+            normalizeGroupName(group)
         }
+        cleanupFavoriteGroupMappingForCurrentFavorites()
     }
 }

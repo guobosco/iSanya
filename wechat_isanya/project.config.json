@@ -1,5 +1,6 @@
 {
   "miniprogramRoot": "dist/",
+  "sitemapLocation": "dist/sitemap.json",
   "projectname": "wechat_isanya",
   "description": "iSanya mini program",
   "appid": "wx2bdc1d65e1fa5d23",

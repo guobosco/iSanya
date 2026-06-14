@@ -403,7 +403,9 @@ fun ServiceDetailScreen(
                             isTogglingFavorite = true
                             try {
                                 val result = AppDataStore.toggleFavoriteService(service!!.id)
-                                val message = if (result.favoriteIds.contains(service!!.id)) {
+                                val message = if (result.syncFailed) {
+                                    "心愿单同步失败，请重试"
+                                } else if (result.favoriteIds.contains(service!!.id)) {
                                     "已加入心愿单"
                                 } else {
                                     "已移出心愿单"
@@ -813,7 +815,9 @@ fun ServiceDetailScreen(
                                             service!!.id,
                                             group
                                         )
-                                        val message = if (result.favoriteIds.contains(service!!.id)) {
+                                        val message = if (result.syncFailed) {
+                                            "加入心愿单失败，请重试"
+                                        } else if (result.favoriteIds.contains(service!!.id)) {
                                             "已加入心愿单"
                                         } else {
                                             "加入心愿单失败，请重试"

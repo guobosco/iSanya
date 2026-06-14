@@ -22,10 +22,30 @@ export default defineAppConfig({
     backgroundColor: '#FFFFFF',
     borderStyle: 'black',
     list: [
-      { pagePath: 'pages/home/index', text: 'i三亚' },
-      { pagePath: 'pages/wishlist/index', text: '心愿单' },
-      { pagePath: 'pages/messages/index', text: '消息' },
-      { pagePath: 'pages/mine/index', text: '我的' },
+      {
+        pagePath: 'pages/home/index',
+        text: 'i三亚',
+        iconPath: 'assets/tabbar/tab_home_normal.png',
+        selectedIconPath: 'assets/tabbar/tab_home_selected.png',
+      },
+      {
+        pagePath: 'pages/wishlist/index',
+        text: '心愿单',
+        iconPath: 'assets/tabbar/tab_wishlist_normal.png',
+        selectedIconPath: 'assets/tabbar/tab_wishlist_selected.png',
+      },
+      {
+        pagePath: 'pages/messages/index',
+        text: '消息',
+        iconPath: 'assets/tabbar/tab_messages_normal.png',
+        selectedIconPath: 'assets/tabbar/tab_messages_selected.png',
+      },
+      {
+        pagePath: 'pages/mine/index',
+        text: '我的',
+        iconPath: 'assets/tabbar/tab_mine_normal.png',
+        selectedIconPath: 'assets/tabbar/tab_mine_selected.png',
+      },
     ],
   },
 });

@@ -100,8 +100,9 @@ class User(Base):
     is_synced = Column(Boolean, default=True)
 
     # --- 关系 (Relationships) ---
-    # 用户发布的服务
+    # 用户发布的服务与体验
     services = relationship("Service", back_populates="creator_user")
+    experiences = relationship("Experience", back_populates="host_user")
 
 class Service(Base):
     """
@@ -142,6 +143,57 @@ class Service(Base):
     is_synced = Column(Boolean, default=True)
 
     creator_user = relationship("User", back_populates="services")
+
+
+class Experience(Base):
+    """
+    体验模型 (Experience Model)
+    与服务分表存储，便于后续扩展不同类目、详情字段与展示逻辑。
+    """
+    __tablename__ = "experiences"
+
+    id = Column(String, primary_key=True, index=True)
+    title = Column(String, default="")
+    description = Column(Text, default="")
+    cover_image_url = Column(String, default="")
+    image_urls = Column(JSON, default=[])
+    location = Column(String, default="")
+    price_text = Column(String, default="")
+    price_basis_text = Column(String, default="")
+    category = Column(String, default="其他体验")
+    duration_text = Column(String, default="")
+    badge_text = Column(String, default="")
+    tags = Column(JSON, default=[])
+    host_id = Column(String, ForeignKey("users.id"), index=True)
+    host_name = Column(String, default="")
+    created_at = Column(BigInteger, default=0)
+    updated_at = Column(BigInteger, default=0)
+    is_deleted = Column(Boolean, default=False)
+    is_synced = Column(Boolean, default=True)
+
+    host_user = relationship("User", back_populates="experiences")
+
+
+class WishlistGroup(Base):
+    __tablename__ = "wishlist_groups"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
+    name = Column(String, default="", index=True)
+    sort_order = Column(Integer, default=0)
+    created_at = Column(BigInteger, default=0)
+    updated_at = Column(BigInteger, default=0)
+
+
+class WishlistGroupItem(Base):
+    __tablename__ = "wishlist_group_items"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
+    group_id = Column(String, ForeignKey("wishlist_groups.id"), index=True, nullable=False)
+    service_id = Column(String, ForeignKey("services.id"), index=True, nullable=False)
+    created_at = Column(BigInteger, default=0)
+    updated_at = Column(BigInteger, default=0)
 
 class Conversation(Base):
     __tablename__ = "conversations"
@@ -193,5 +245,3 @@ class ChatMessage(Base):
     created_at = Column(BigInteger, default=0)
     updated_at = Column(BigInteger, default=0)
     is_deleted = Column(Boolean, default=False)
-
-

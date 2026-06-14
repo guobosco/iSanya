@@ -34,10 +34,12 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 AVATAR_DIR = os.path.join(STATIC_DIR, "avatars")
 CHAT_MEDIA_DIR = os.path.join(STATIC_DIR, "chat")
 SERVICE_MEDIA_DIR = os.path.join(STATIC_DIR, "services")
+EXPERIENCE_MEDIA_DIR = os.path.join(STATIC_DIR, "experiences")
 MAX_UPLOAD_SIZE_BYTES = int(os.getenv("LULU_MAX_UPLOAD_SIZE_MB", "10")) * 1024 * 1024
 MEDIA_BIZ_TO_DIR = {
     "avatar": AVATAR_DIR,
     "service": SERVICE_MEDIA_DIR,
+    "experience": EXPERIENCE_MEDIA_DIR,
     "chat": CHAT_MEDIA_DIR,
 }
 APP_ENV = os.getenv("LULU_ENV", "development").lower()
@@ -137,12 +139,190 @@ def ensure_record_owner(record, current_user: models.User, owner_field: str = "u
     ensure_field_matches_current_user(current_user, owner_id, owner_field)
 
 
+DEFAULT_WISHLIST_GROUP_NAME = "默认分组"
+
+
+def _dedupe_non_empty_ids(values: Optional[List[str]]) -> List[str]:
+    return list(dict.fromkeys([value for value in (values or []) if value]))
+
+
+def _normalize_wishlist_group_name(name: Optional[str]) -> str:
+    trimmed = (name or "").strip()
+    return trimmed or DEFAULT_WISHLIST_GROUP_NAME
+
+
+def _filter_existing_service_ids(db: Session, service_ids: List[str]) -> List[str]:
+    normalized = _dedupe_non_empty_ids(service_ids)
+    if not normalized:
+        return []
+    existing_ids = {
+        item.id for item in db.query(models.Service.id).filter(
+            models.Service.id.in_(normalized),
+            models.Service.is_deleted == False
+        ).all()
+    }
+    return [sid for sid in normalized if sid in existing_ids]
+
+
+def _build_wishlist_profile_response(
+    service_ids: List[str],
+    groups: List[tuple[str, List[str]]]
+) -> schemas.WishlistProfileResponse:
+    return schemas.WishlistProfileResponse(
+        service_ids=service_ids,
+        groups=[
+            schemas.WishlistGroupPayload(name=name, service_ids=group_service_ids)
+            for name, group_service_ids in groups
+        ]
+    )
+
+
+def _load_wishlist_profile(db: Session, current_user: models.User) -> schemas.WishlistProfileResponse:
+    service_ids = _dedupe_non_empty_ids(current_user.favorite_service_ids or [])
+    favorite_id_set = set(service_ids)
+    group_rows = db.query(models.WishlistGroup).filter(
+        models.WishlistGroup.user_id == current_user.id
+    ).order_by(
+        models.WishlistGroup.sort_order.asc(),
+        models.WishlistGroup.created_at.asc(),
+        models.WishlistGroup.id.asc()
+    ).all()
+
+    group_ids = [row.id for row in group_rows]
+    items_by_group: dict[str, List[str]] = {group_id: [] for group_id in group_ids}
+    if group_ids:
+        item_rows = db.query(models.WishlistGroupItem).filter(
+            models.WishlistGroupItem.user_id == current_user.id,
+            models.WishlistGroupItem.group_id.in_(group_ids)
+        ).order_by(
+            models.WishlistGroupItem.created_at.asc(),
+            models.WishlistGroupItem.id.asc()
+        ).all()
+        for item in item_rows:
+            items_by_group.setdefault(item.group_id, []).append(item.service_id)
+
+    assigned_ids = set()
+    groups: List[tuple[str, List[str]]] = []
+    default_group_index: Optional[int] = None
+    for row in group_rows:
+        name = _normalize_wishlist_group_name(row.name)
+        if name == DEFAULT_WISHLIST_GROUP_NAME and default_group_index is None:
+            default_group_index = len(groups)
+        group_service_ids: List[str] = []
+        for service_id in items_by_group.get(row.id, []):
+            if service_id in favorite_id_set and service_id not in assigned_ids:
+                group_service_ids.append(service_id)
+                assigned_ids.add(service_id)
+        groups.append((name, group_service_ids))
+
+    unassigned_ids = [service_id for service_id in service_ids if service_id not in assigned_ids]
+    if default_group_index is None:
+        default_group_index = 0
+        groups.insert(0, (DEFAULT_WISHLIST_GROUP_NAME, []))
+
+    if unassigned_ids:
+        default_name, default_service_ids = groups[default_group_index]
+        groups[default_group_index] = (default_name, default_service_ids + unassigned_ids)
+
+    deduped_groups: List[tuple[str, List[str]]] = []
+    seen_group_names = set()
+    for name, group_service_ids in groups:
+        if name in seen_group_names:
+            continue
+        seen_group_names.add(name)
+        deduped_groups.append((name, group_service_ids))
+
+    return _build_wishlist_profile_response(service_ids, deduped_groups)
+
+
+def _persist_wishlist_profile(
+    db: Session,
+    current_user: models.User,
+    service_ids: List[str],
+    groups: Optional[List[schemas.WishlistGroupPayload]] = None
+) -> schemas.WishlistProfileResponse:
+    normalized_service_ids = _filter_existing_service_ids(db, service_ids)
+    normalized_service_id_set = set(normalized_service_ids)
+    source_groups = groups if groups is not None else _load_wishlist_profile(db, current_user).groups
+
+    normalized_groups: List[tuple[str, List[str]]] = []
+    seen_group_names = set()
+    assigned_ids = set()
+    for group in source_groups:
+        name = _normalize_wishlist_group_name(group.name)
+        if name in seen_group_names:
+            continue
+        seen_group_names.add(name)
+        group_service_ids: List[str] = []
+        for service_id in _dedupe_non_empty_ids(group.service_ids):
+            if service_id not in normalized_service_id_set or service_id in assigned_ids:
+                continue
+            group_service_ids.append(service_id)
+            assigned_ids.add(service_id)
+        normalized_groups.append((name, group_service_ids))
+
+    if DEFAULT_WISHLIST_GROUP_NAME not in seen_group_names:
+        normalized_groups.insert(0, (DEFAULT_WISHLIST_GROUP_NAME, []))
+
+    default_index = next(
+        (index for index, (name, _) in enumerate(normalized_groups) if name == DEFAULT_WISHLIST_GROUP_NAME),
+        0
+    )
+    unassigned_ids = [service_id for service_id in normalized_service_ids if service_id not in assigned_ids]
+    if unassigned_ids:
+        default_name, default_service_ids = normalized_groups[default_index]
+        normalized_groups[default_index] = (default_name, default_service_ids + unassigned_ids)
+
+    timestamp = int(time.time() * 1000)
+    current_user.favorite_service_ids = normalized_service_ids
+    current_user.updated_at = timestamp
+
+    db.query(models.WishlistGroupItem).filter(
+        models.WishlistGroupItem.user_id == current_user.id
+    ).delete(synchronize_session=False)
+    db.query(models.WishlistGroup).filter(
+        models.WishlistGroup.user_id == current_user.id
+    ).delete(synchronize_session=False)
+
+    for index, (name, group_service_ids) in enumerate(normalized_groups):
+        group_id = uuid.uuid4().hex
+        db.add(models.WishlistGroup(
+            id=group_id,
+            user_id=current_user.id,
+            name=name,
+            sort_order=index,
+            created_at=timestamp,
+            updated_at=timestamp
+        ))
+        for service_id in group_service_ids:
+            db.add(models.WishlistGroupItem(
+                id=uuid.uuid4().hex,
+                user_id=current_user.id,
+                group_id=group_id,
+                service_id=service_id,
+                created_at=timestamp,
+                updated_at=timestamp
+            ))
+
+    return _build_wishlist_profile_response(normalized_service_ids, normalized_groups)
+
+
 def _build_upload_filename(user_id: str, upload_file: UploadFile, force_ext: Optional[str] = None) -> str:
     if force_ext:
         ext = force_ext
     else:
         ext = upload_file.filename.split(".")[-1] if upload_file.filename and "." in upload_file.filename else "bin"
     return f"{user_id}_{uuid.uuid4().hex}.{ext}"
+
+
+def _build_media_object_key(biz: str, user_id: str, filename: str) -> str:
+    return f"{biz}s/{user_id}/{filename}"
+
+
+def _build_media_storage_path(biz: str, user_id: str, filename: str) -> str:
+    user_dir = os.path.join(MEDIA_BIZ_TO_DIR[biz], user_id)
+    os.makedirs(user_dir, exist_ok=True)
+    return os.path.join(user_dir, filename)
 
 
 def _save_upload_file_with_limit(upload_file: UploadFile, file_path: str, max_bytes: int) -> int:
@@ -186,15 +366,18 @@ def _upload_media(
     if biz == "avatar":
         force_ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
     new_filename = _build_upload_filename(current_user.id, file, force_ext=force_ext)
-    file_path = os.path.join(MEDIA_BIZ_TO_DIR[biz], new_filename)
+    file_path = _build_media_storage_path(biz, current_user.id, new_filename)
     size = _save_upload_file_with_limit(file, file_path, MAX_UPLOAD_SIZE_BYTES)
 
     if biz == "avatar":
-        object_key = f"avatars/{new_filename}"
+        object_key = _build_media_object_key("avatar", current_user.id, new_filename)
         timestamp = int(time.time())
         url = f"static/{object_key}?t={timestamp}"
     elif biz == "service":
-        object_key = f"services/{new_filename}"
+        object_key = _build_media_object_key("service", current_user.id, new_filename)
+        url = f"static/{object_key}"
+    elif biz == "experience":
+        object_key = _build_media_object_key("experience", current_user.id, new_filename)
         url = f"static/{object_key}"
     else:
         object_key = f"chat/{new_filename}"
@@ -392,6 +575,7 @@ def ensure_seed_discovery_services(db: Session, count: int = 100):
         "运动教练",
         "私厨",
         "化妆",
+        "技能教学",
         "其他服务",
     ]
     seed_titles = [
@@ -401,6 +585,7 @@ def ensure_seed_discovery_services(db: Session, count: int = 100):
         "海棠湾酒店健身房塑形私教",
         "三亚上门琼味海鲜私厨｜4–6 人桌",
         "旅拍度假妆发一体｜扛汗持久定妆",
+        "海边吉他弹唱入门课｜零基础也能跟上",
         "cdf 三亚免税动线陪同｜少折返",
     ]
     titles = []
@@ -453,10 +638,13 @@ def ensure_seed_discovery_services(db: Session, count: int = 100):
         cat_idx = (i - 1) % len(seed_category_presets)
         category = seed_category_presets[cat_idx]
         
-        # 每个服务分配 5 张不同的本地图片（共 500 张）
+        # 每个服务分配 5 张不同的本地图片（按发布者分层存储）
         start_img_idx = ((i - 1) % 100) * 5 + 1
-        cover = f"static/services/sanya_service_{start_img_idx:03d}.jpg?v=2"
-        imgs = [f"static/services/sanya_service_{idx:03d}.jpg?v=2" for idx in range(start_img_idx, start_img_idx + 5)]
+        cover = f"static/services/{creator_id}/sanya_service_{start_img_idx:03d}.jpg?v=2"
+        imgs = [
+            f"static/services/{creator_id}/sanya_service_{idx:03d}.jpg?v=2"
+            for idx in range(start_img_idx, start_img_idx + 5)
+        ]
         peer = f"seed-user-{((i + 3) % 20) + 1:02d}"
         participants = [] if i % 5 != 0 else [creator_id, peer]
         
@@ -608,6 +796,7 @@ app = FastAPI()
 os.makedirs(AVATAR_DIR, exist_ok=True)
 os.makedirs(CHAT_MEDIA_DIR, exist_ok=True)
 os.makedirs(SERVICE_MEDIA_DIR, exist_ok=True)
+os.makedirs(EXPERIENCE_MEDIA_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -836,30 +1025,44 @@ def get_my_favorite_services(current_user: models.User = Depends(get_current_use
     return schemas.FavoriteServicesResponse(service_ids=current_user.favorite_service_ids or [])
 
 
+@app.get("/me/wishlist/profile", response_model=schemas.WishlistProfileResponse)
+def get_my_wishlist_profile(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    return _load_wishlist_profile(db, current_user)
+
+
 @app.put("/me/wishlist/services", response_model=schemas.FavoriteServicesResponse)
 def update_my_favorite_services(
     payload: schemas.FavoriteServicesUpdateRequest,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    service_ids = list(dict.fromkeys(payload.service_ids))
-    if service_ids:
-        existing_ids = {
-            item.id for item in db.query(models.Service.id).filter(
-                models.Service.id.in_(service_ids),
-                models.Service.is_deleted == False
-            ).all()
-        }
-        service_ids = [sid for sid in service_ids if sid in existing_ids]
-    current_user.favorite_service_ids = service_ids
-    current_user.updated_at = int(time.time() * 1000)
+    response = _persist_wishlist_profile(db, current_user, payload.service_ids)
     try:
         db.commit()
         db.refresh(current_user)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-    return schemas.FavoriteServicesResponse(service_ids=current_user.favorite_service_ids or [])
+    return schemas.FavoriteServicesResponse(service_ids=response.service_ids)
+
+
+@app.put("/me/wishlist/profile", response_model=schemas.WishlistProfileResponse)
+def update_my_wishlist_profile(
+    payload: schemas.WishlistProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    response = _persist_wishlist_profile(db, current_user, payload.service_ids, payload.groups)
+    try:
+        db.commit()
+        db.refresh(current_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    return response
 
 @app.post("/service/upload", response_model=schemas.ChatUploadResponse)
 async def upload_service_file(
@@ -867,6 +1070,18 @@ async def upload_service_file(
     current_user: models.User = Depends(get_current_user)
 ):
     result = _upload_media(file=file, current_user=current_user, biz="service")
+    return schemas.ChatUploadResponse(
+        url=result.url,
+        object_key=result.object_key
+    )
+
+
+@app.post("/experience/upload", response_model=schemas.ChatUploadResponse)
+async def upload_experience_file(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_user)
+):
+    result = _upload_media(file=file, current_user=current_user, biz="experience")
     return schemas.ChatUploadResponse(
         url=result.url,
         object_key=result.object_key
@@ -984,6 +1199,125 @@ def delete_service(
     if db_item is None:
         raise HTTPException(status_code=404, detail="Service not found")
     ensure_record_owner(db_item, current_user, "creator_id")
+    db_item.is_deleted = True
+    db_item.updated_at = int(time.time() * 1000)
+    try:
+        db.commit()
+        db.refresh(db_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    return db_item
+
+
+@app.post("/experiences/", response_model=schemas.Experience)
+def create_experience(
+    experience: schemas.ExperienceCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    ensure_field_matches_current_user(current_user, experience.host_id, "host_id")
+    db_item = models.Experience(**experience.model_dump())
+    db.add(db_item)
+    try:
+        db.commit()
+        db.refresh(db_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    return db_item
+
+
+@app.put("/experiences/{experience_id}", response_model=schemas.Experience)
+def update_experience(
+    experience_id: str,
+    experience: schemas.ExperienceCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    db_item = db.query(models.Experience).filter(
+        models.Experience.id == experience_id,
+        models.Experience.is_deleted == False
+    ).first()
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Experience not found")
+    ensure_record_owner(db_item, current_user, "host_id")
+    ensure_field_matches_current_user(current_user, experience.host_id, "host_id")
+
+    update_data = experience.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        if key in {"id", "host_id", "created_at"}:
+            continue
+        setattr(db_item, key, value)
+    db_item.updated_at = int(time.time() * 1000)
+
+    try:
+        db.commit()
+        db.refresh(db_item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    return db_item
+
+
+@app.get("/experiences/", response_model=List[schemas.Experience])
+def read_experiences(
+    user_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    owner_id = ensure_optional_self_access(current_user, user_id)
+    query = db.query(models.Experience).filter(models.Experience.is_deleted == False)
+    if owner_id:
+        query = query.filter(models.Experience.host_id == owner_id)
+    return query.order_by(desc(models.Experience.updated_at), desc(models.Experience.created_at)).offset(skip).limit(limit).all()
+
+
+@app.get("/experiences/discovery", response_model=List[schemas.Experience])
+def list_square_discovery_experiences(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=200),
+    updated_after: Optional[int] = Query(None, ge=0),
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Experience).filter(models.Experience.is_deleted == False)
+    if updated_after is not None:
+        query = query.filter(models.Experience.updated_at > updated_after)
+    return (
+        query.order_by(desc(models.Experience.updated_at), desc(models.Experience.created_at))
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+
+@app.get("/experiences/{experience_id}", response_model=schemas.Experience)
+def read_experience_detail(
+    experience_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[models.User] = Depends(get_optional_current_user)
+):
+    db_item = db.query(models.Experience).filter(
+        models.Experience.id == experience_id,
+        models.Experience.is_deleted == False
+    ).first()
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Experience not found")
+    return db_item
+
+
+@app.delete("/experiences/{experience_id}", response_model=schemas.Experience)
+def delete_experience(
+    experience_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    db_item = db.query(models.Experience).filter(models.Experience.id == experience_id).first()
+    if db_item is None:
+        raise HTTPException(status_code=404, detail="Experience not found")
+    ensure_record_owner(db_item, current_user, "host_id")
     db_item.is_deleted = True
     db_item.updated_at = int(time.time() * 1000)
     try:

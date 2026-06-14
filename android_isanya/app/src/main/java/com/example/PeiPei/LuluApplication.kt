@@ -103,7 +103,7 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
         }
 
         applicationScope.launch(startupExceptionHandler) {
-            repository.newChatMessageFlow.collect { message ->
+            repository.newChatMessageFlow.collect { message: com.example.Lulu.data.model.ChatMessage ->
                 runCatching {
                     val conversation = repository.getConversationById(message.conversationId).first()
                     val title = conversation?.title?.ifBlank { "新消息" } ?: "新消息"

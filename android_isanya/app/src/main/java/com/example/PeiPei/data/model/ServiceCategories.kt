@@ -12,6 +12,7 @@ object ServiceCategories {
     const val FITNESS_COACH = "运动教练"
     const val PRIVATE_CHEF = "私厨"
     const val MAKEUP = "化妆"
+    const val SKILL_TEACHING = "技能教学"
     const val OTHER = "其他服务"
 
     val PRESETS = listOf(
@@ -21,6 +22,7 @@ object ServiceCategories {
         FITNESS_COACH,
         PRIVATE_CHEF,
         MAKEUP,
+        SKILL_TEACHING,
         OTHER
     )
 
@@ -90,6 +92,12 @@ object ServiceCategories {
             descriptionPlaceholder = "写清妆容风格、跟妆时长、是否含假睫毛/饰品、上门或到店等",
             defaultServiceMode = "次",
             categoryTip = "化妆类可说明是否含补妆与跟场时间。"
+        )
+        SKILL_TEACHING -> PublishFormHints(
+            titlePlaceholder = "例如：吉他弹唱入门课｜1 对 1 陪练",
+            descriptionPlaceholder = "写清教学方向、适合基础、单次课时长、是否含课后练习与所需器材",
+            defaultServiceMode = "小时",
+            categoryTip = "技能教学类建议标明课程目标、适合人群以及是否提供课后答疑。"
         )
         else -> PublishFormHints(
             titlePlaceholder = "用一句话概括你的服务",

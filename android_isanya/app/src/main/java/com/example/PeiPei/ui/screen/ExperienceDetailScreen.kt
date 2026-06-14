@@ -111,6 +111,7 @@ import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.Experience
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceDeclarations
@@ -134,11 +135,21 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private tailrec fun Context.findActivityForFullscreenImage(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivityForFullscreenImage()
     else -> null
+}
+
+private suspend fun loadExperienceDetailItem(experienceId: String): ExperienceItemUi? = withContext(Dispatchers.IO) {
+    runCatching {
+        RetrofitClient.apiService.getExperienceById(experienceId)
+            .takeIf { !it.isDeleted }
+            ?.toUiModel()
+    }.getOrNull()
 }
 
 private val ServiceDetailPriceSubtitleGray = Color(0xFF666666)
@@ -206,11 +217,6 @@ private fun syntheticServiceForExperienceInquiry(
     )
 }
 
-private fun experienceDetailImageUrls(item: ExperienceItemUi): List<String> {
-    return listOf(item.imageUrl) +
-        listOf(1, 2).map { n -> "https://picsum.photos/seed/${item.id}_g$n/400/520" }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExperienceDetailScreen(
@@ -220,8 +226,10 @@ fun ExperienceDetailScreen(
 ) {
     val popNav = mainShellNavController ?: rootNavController
     val view = LocalView.current
-    val cleanId = experienceId?.trim()
-    val item = remember(cleanId) { cleanId?.let { experienceItemFromStableId(it) } }
+    val cleanId = experienceId?.trim()?.takeIf { it.isNotEmpty() }
+    val loadedItem by androidx.compose.runtime.produceState<ExperienceItemUi?>(initialValue = null, key1 = cleanId) {
+        value = cleanId?.let { loadExperienceDetailItem(it) }
+    }
     val currentUser by AppDataStore.currentUser.collectAsState()
     val isLoggedIn = currentUser.id.isNotEmpty()
     val contacts by AppDataStore.contacts.collectAsState()
@@ -256,16 +264,17 @@ fun ExperienceDetailScreen(
 
     BackHandler(onBack = ::handleExperienceDetailBack)
 
-    if (item == null) {
+    val item = loadedItem ?: run {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("未找到体验详情")
         }
         return
     }
 
-    val stableId = cleanId!!
-    val categoryTitle = remember(stableId) { experienceCategoryTitleForStableId(stableId) }
-    val imageUrls = remember(item) { experienceDetailImageUrls(item) }
+    val categoryTitle = item.categoryTitle
+    val imageUrls = remember(item) {
+        if (item.imageUrls.isEmpty()) listOf(item.imageUrl).filter { it.isNotBlank() } else item.imageUrls
+    }
     val creatorUser = remember(contacts, currentUser) {
         contacts.firstOrNull { it.id.isNotEmpty() && it.id != currentUser.id }
             ?: contacts.firstOrNull()
@@ -289,13 +298,16 @@ fun ExperienceDetailScreen(
         add(item.badgeLabel)
         item.metaLine.split("·").map { it.trim() }.filter { it.isNotEmpty() }.forEach { add(it) }
         if (categoryTitle.isNotBlank()) add(categoryTitle)
+        item.tags.forEach { add(it) }
     }
     val descriptionText = remember(item, categoryTitle) {
-        val cat = categoryTitle.ifBlank { "体验" }
-        "「$cat」${item.metaLine}。更多动线说明、集合地点与退改规则请在预订后与体验官确认。"
+        item.description.ifBlank {
+            val cat = categoryTitle.ifBlank { "体验" }
+            "「$cat」${item.metaLine}。更多动线说明、集合地点与退改规则请在预订后与体验官确认。"
+        }
     }
-    val experiencePriceBasis = "每人起"
-    var selectedExperienceTierIndex by remember(stableId) { mutableIntStateOf(0) }
+    val experiencePriceBasis = item.priceBasisText.ifBlank { "每人起" }
+    var selectedExperienceTierIndex by remember(item.id) { mutableIntStateOf(0) }
     val experienceContentTiers = remember(item.priceFromYuan, experiencePriceBasis) {
         buildExperienceContentPickOptions(item.priceFromYuan, experiencePriceBasis)
     }

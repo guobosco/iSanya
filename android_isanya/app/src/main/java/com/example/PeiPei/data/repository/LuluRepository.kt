@@ -33,6 +33,8 @@ import com.example.Lulu.data.remote.AuthSession
 import com.example.Lulu.data.remote.ChatWebSocketClient
 import com.example.Lulu.data.remote.FavoriteServicesPayload
 import com.example.Lulu.data.remote.RegisterRequest
+import com.example.Lulu.data.remote.WishlistGroupPayload
+import com.example.Lulu.data.remote.WishlistProfilePayload
 import com.example.Lulu.util.BookingTimeRangesCodec
 import com.google.gson.Gson
 import java.io.File
@@ -90,6 +92,12 @@ class LuluRepository(
         val errorType: FavoriteSyncError? = null
     )
 
+    data class WishlistProfileState(
+        val favoriteIds: Set<String>,
+        val groups: List<String>,
+        val favoriteServiceGroups: Map<String, String>
+    )
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val refreshMutex = Mutex()
     /**
@@ -97,25 +105,25 @@ class LuluRepository(
      * 大厂信息流常见策略：首屏快显 + 提前拉下一屏，减少用户滑到底时的等待（仍受 [refreshMutex] 与网络约束）。
      */
     private val discoveryFeedPrefetchSkip = AtomicInteger(0)
-    /** 心愿单远程 PUT 串行化，避免批量加入等场景下多个协程并发覆盖。 */
+    /** 心愿单远程写操作串行化，避免批量加入等场景下多个协程并发覆盖。 */
     private val favoriteRemoteSyncMutex = Mutex()
 
     private val _wishlistRemoteSyncFailures = MutableSharedFlow<String>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    /** 后台同步心愿单列表失败时发出文案，供界面 Snackbar 提示（本地收藏仍保留）。 */
+    /** 心愿单远程写失败时发出文案，供界面 Snackbar/Toast 提示。 */
     val wishlistRemoteSyncFailures: SharedFlow<String> = _wishlistRemoteSyncFailures.asSharedFlow()
 
     private fun wishlistSyncFailureUserMessage(throwable: Throwable?): String {
         return when (val t = throwable) {
-            is IOException -> "网络异常，心愿单已保存在本机，联网后将自动同步"
+            is IOException -> "网络异常，心愿单同步失败，请稍后重试"
             is HttpException -> when (t.code()) {
-                404 -> "服务不存在或已下架，心愿单暂保存在本机"
-                else -> "心愿单同步失败，已保存在本机，请稍后重试"
+                404 -> "服务不存在或已下架，心愿单同步失败"
+                else -> "心愿单同步失败，请稍后重试"
             }
-            null -> "心愿单同步失败，已保存在本机，请稍后重试"
-            else -> "心愿单同步失败，已保存在本机，请稍后重试"
+            null -> "心愿单同步失败，请稍后重试"
+            else -> "心愿单同步失败，请稍后重试"
         }
     }
     private val gson = Gson()
@@ -419,6 +427,15 @@ class LuluRepository(
         userDao.insertUser(local.copy(favoriteServiceIds = remoteIds, updatedAt = System.currentTimeMillis()))
     }
 
+    suspend fun refreshWishlistProfile(): WishlistProfileState? = withContext(Dispatchers.IO) {
+        val api = apiService ?: return@withContext null
+        val userId = currentUserId
+        if (userId.isBlank()) return@withContext null
+        val local = userDao.getUserByIdSuspend(userId) ?: return@withContext null
+        val payload = runCatching { api.getMyWishlistProfile() }.getOrNull() ?: return@withContext null
+        persistWishlistProfileState(local, payload)
+    }
+
     private suspend fun syncDiscoveryUsers() {
         val service = apiService ?: return
         val remoteUsers = runCatching { service.getDiscoveryUsers(limit = 20) }.getOrNull() ?: return
@@ -492,21 +509,24 @@ class LuluRepository(
         }
         val user = userDao.getUserByIdSuspend(userId)
             ?: return@withContext FavoriteToggleResult(emptySet(), syncFailed = true, errorType = FavoriteSyncError.SERVER)
+        val currentIds = user.favoriteServiceIds.toSet()
         val updatedIds = user.favoriteServiceIds.toMutableSet().apply {
             if (contains(serviceId)) remove(serviceId) else add(serviceId)
         }.toList()
-        val localUpdated = user.copy(
-            favoriteServiceIds = updatedIds,
-            updatedAt = System.currentTimeMillis()
-        )
-        userDao.insertUser(localUpdated)
+        val api = apiService
+            ?: return@withContext FavoriteToggleResult(currentIds, syncFailed = true, errorType = FavoriteSyncError.SERVER)
         val remoteResult = runCatching {
-            apiService?.updateMyFavoriteServices(FavoriteServicesPayload(updatedIds))?.serviceIds ?: updatedIds
+            api.updateMyFavoriteServices(FavoriteServicesPayload(updatedIds)).serviceIds
         }
         val remoteIds = remoteResult.getOrNull()
         if (remoteIds != null) {
             val remoteSet = remoteIds.toSet()
-            userDao.insertUser(localUpdated.copy(favoriteServiceIds = remoteSet.toList()))
+            userDao.insertUser(
+                user.copy(
+                    favoriteServiceIds = remoteSet.toList(),
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
             FavoriteToggleResult(remoteSet, syncFailed = false, errorType = null)
         } else {
             val throwable = remoteResult.exceptionOrNull()
@@ -517,7 +537,7 @@ class LuluRepository(
                 }
                 else -> FavoriteSyncError.SERVER
             }
-            FavoriteToggleResult(updatedIds.toSet(), syncFailed = true, errorType = errorType)
+            FavoriteToggleResult(currentIds, syncFailed = true, errorType = errorType)
         }
     }
 
@@ -537,45 +557,65 @@ class LuluRepository(
             )
         }
         val updatedIds = (user.favoriteServiceIds + serviceId).toList()
-        val localUpdated = user.copy(
-            favoriteServiceIds = updatedIds,
-            updatedAt = System.currentTimeMillis()
-        )
-        userDao.insertUser(localUpdated)
         val api = apiService
         if (api == null) {
-            return@withContext FavoriteToggleResult(updatedIds.toSet(), syncFailed = false, errorType = null)
+            return@withContext FavoriteToggleResult(
+                favoriteIds = user.favoriteServiceIds.toSet(),
+                syncFailed = true,
+                errorType = FavoriteSyncError.SERVER
+            )
         }
-        // 先落库再立即返回，避免「保存到心愿单」弹窗长时间卡在「正在加入…」等待网络。
-        scope.launch {
-            val failureMessage = favoriteRemoteSyncMutex.withLock {
-                val latestForSync = userDao.getUserByIdSuspend(userId) ?: return@withLock null
-                val idsToSync = latestForSync.favoriteServiceIds
-                val remoteResult = runCatching {
-                    api.updateMyFavoriteServices(FavoriteServicesPayload(idsToSync)).serviceIds
+        val remoteResult = runCatching {
+            api.updateMyFavoriteServices(FavoriteServicesPayload(updatedIds)).serviceIds
+        }
+        val remoteIds = remoteResult.getOrNull()
+        if (remoteIds != null) {
+            val remoteSet = remoteIds.toSet()
+            userDao.insertUser(
+                user.copy(
+                    favoriteServiceIds = remoteSet.toList(),
+                    updatedAt = System.currentTimeMillis()
+                )
+            )
+            FavoriteToggleResult(remoteSet, syncFailed = false, errorType = null)
+        } else {
+            val throwable = remoteResult.exceptionOrNull()
+            val errorType = when (throwable) {
+                is java.io.IOException -> FavoriteSyncError.NETWORK
+                is retrofit2.HttpException -> {
+                    if (throwable.code() == 404) FavoriteSyncError.SERVICE_NOT_FOUND else FavoriteSyncError.SERVER
                 }
-                val remoteIds = remoteResult.getOrNull()
-                if (remoteIds != null) {
-                    val remoteSet = remoteIds.toSet()
-                    val latest = userDao.getUserByIdSuspend(userId) ?: return@withLock null
-                    userDao.insertUser(
-                        latest.copy(
-                            favoriteServiceIds = remoteSet.toList(),
-                            updatedAt = System.currentTimeMillis()
-                        )
+                else -> FavoriteSyncError.SERVER
+            }
+            FavoriteToggleResult(
+                favoriteIds = user.favoriteServiceIds.toSet(),
+                syncFailed = true,
+                errorType = errorType
+            )
+        }
+    }
+
+    suspend fun updateWishlistProfile(
+        favoriteIds: Set<String>,
+        groups: List<String>,
+        favoriteServiceGroups: Map<String, String>
+    ): WishlistProfileState? = withContext(Dispatchers.IO) {
+        val api = apiService ?: return@withContext null
+        val userId = currentUserId
+        if (userId.isBlank()) return@withContext null
+        val local = userDao.getUserByIdSuspend(userId) ?: return@withContext null
+        val payload = favoriteRemoteSyncMutex.withLock {
+            runCatching {
+                api.updateMyWishlistProfile(
+                    buildWishlistProfilePayload(
+                        favoriteIds = favoriteIds,
+                        groups = groups,
+                        favoriteServiceGroups = favoriteServiceGroups
                     )
-                    null
-                } else {
-                    val ex = remoteResult.exceptionOrNull()
-                    ex?.let { Log.w(TAG, "addFavoriteService: remote sync failed, keeping local wishlist", it) }
-                    wishlistSyncFailureUserMessage(ex)
-                }
-            }
-            if (failureMessage != null) {
-                _wishlistRemoteSyncFailures.emit(failureMessage)
-            }
-        }
-        FavoriteToggleResult(updatedIds.toSet(), syncFailed = false, errorType = null)
+                )
+            }.getOrNull()
+        } ?: return@withContext null
+        persistWishlistProfileState(local, payload)
     }
 
     suspend fun uploadAvatar(file: File): String? = withContext(Dispatchers.IO) {
@@ -999,6 +1039,94 @@ class LuluRepository(
         }
     }
 
+    private fun normalizeWishlistGroupName(groupName: String?): String {
+        val trimmed = groupName?.trim().orEmpty()
+        return if (trimmed.isBlank()) DEFAULT_WISHLIST_GROUP else trimmed
+    }
+
+    private fun buildWishlistProfileState(payload: WishlistProfilePayload): WishlistProfileState {
+        val favoriteIds = payload.serviceIds.filter { it.isNotBlank() }.distinct()
+        val favoriteIdSet = favoriteIds.toSet()
+        val groups = mutableListOf<String>()
+        val mapping = linkedMapOf<String, String>()
+
+        payload.groups.forEach { group ->
+            val normalizedName = normalizeWishlistGroupName(group.name)
+            if (groups.none { it.equals(normalizedName, ignoreCase = true) }) {
+                groups += normalizedName
+            }
+            group.serviceIds.forEach { serviceId ->
+                if (serviceId in favoriteIdSet && mapping.containsKey(serviceId).not()) {
+                    mapping[serviceId] = normalizedName
+                }
+            }
+        }
+
+        if (groups.none { it == DEFAULT_WISHLIST_GROUP }) {
+            groups.add(0, DEFAULT_WISHLIST_GROUP)
+        }
+        favoriteIds.forEach { serviceId ->
+            if (mapping.containsKey(serviceId).not()) {
+                mapping[serviceId] = DEFAULT_WISHLIST_GROUP
+            }
+        }
+        return WishlistProfileState(
+            favoriteIds = favoriteIdSet,
+            groups = groups.distinct(),
+            favoriteServiceGroups = mapping
+        )
+    }
+
+    private fun buildWishlistProfilePayload(
+        favoriteIds: Set<String>,
+        groups: List<String>,
+        favoriteServiceGroups: Map<String, String>
+    ): WishlistProfilePayload {
+        val normalizedFavoriteIds = favoriteIds.filter { it.isNotBlank() }.distinct()
+        val orderedGroups = buildList {
+            add(DEFAULT_WISHLIST_GROUP)
+            groups.forEach { group ->
+                val normalizedName = normalizeWishlistGroupName(group)
+                if (contains(normalizedName).not()) {
+                    add(normalizedName)
+                }
+            }
+        }
+        val idsByGroup = linkedMapOf<String, MutableList<String>>()
+        orderedGroups.forEach { idsByGroup[it] = mutableListOf() }
+
+        normalizedFavoriteIds.forEach { serviceId ->
+            val targetGroup = normalizeWishlistGroupName(favoriteServiceGroups[serviceId])
+            val ensuredGroup = if (idsByGroup.containsKey(targetGroup)) targetGroup else DEFAULT_WISHLIST_GROUP
+            idsByGroup.getValue(ensuredGroup).add(serviceId)
+        }
+
+        val payloadGroups = orderedGroups.map { groupName ->
+            WishlistGroupPayload(
+                name = groupName,
+                serviceIds = idsByGroup[groupName].orEmpty().distinct()
+            )
+        }
+        return WishlistProfilePayload(
+            serviceIds = normalizedFavoriteIds,
+            groups = payloadGroups
+        )
+    }
+
+    private suspend fun persistWishlistProfileState(
+        localUser: User,
+        payload: WishlistProfilePayload
+    ): WishlistProfileState {
+        val state = buildWishlistProfileState(payload)
+        userDao.insertUser(
+            localUser.copy(
+                favoriteServiceIds = state.favoriteIds.toList(),
+                updatedAt = System.currentTimeMillis()
+            )
+        )
+        return state
+    }
+
 
     private fun connectChatSocket() {
         if (!chatSocketConnected && AuthSession.getAccessToken() != null) {
@@ -1037,6 +1165,7 @@ class LuluRepository(
 
     companion object {
         private const val TAG = "LuluRepository"
+        private const val DEFAULT_WISHLIST_GROUP = "默认分组"
         /** 首页注入的假服务条数（类目轮询，每类至少 floor(100/11)=9 条） */
 
         private const val KEY_FULL_REFRESH_TS_PREFIX = "full_refresh_ts_"

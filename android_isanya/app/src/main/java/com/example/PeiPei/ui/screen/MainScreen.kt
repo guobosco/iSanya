@@ -29,10 +29,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,11 +42,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.ui.platform.LocalContext
+import com.example.Lulu.R
 import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 
@@ -62,7 +60,8 @@ import com.example.Lulu.util.BadgeUtils
 
 private data class BottomNavItem(
     val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+    val normalIconRes: Int,
+    val selectedIconRes: Int
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -108,10 +107,26 @@ fun MainScreen(
     }
 
     val items = listOf(
-        BottomNavItem(label = "i三亚", icon = Icons.Outlined.Home),
-        BottomNavItem(label = "心愿单", icon = Icons.Outlined.FavoriteBorder),
-        BottomNavItem(label = "消息", icon = Icons.Outlined.ChatBubbleOutline),
-        BottomNavItem(label = "我的", icon = Icons.Outlined.PersonOutline)
+        BottomNavItem(
+            label = "i三亚",
+            normalIconRes = R.drawable.tab_home_normal,
+            selectedIconRes = R.drawable.tab_home_selected
+        ),
+        BottomNavItem(
+            label = "心愿单",
+            normalIconRes = R.drawable.tab_wishlist_normal,
+            selectedIconRes = R.drawable.tab_wishlist_selected
+        ),
+        BottomNavItem(
+            label = "消息",
+            normalIconRes = R.drawable.tab_messages_normal,
+            selectedIconRes = R.drawable.tab_messages_selected
+        ),
+        BottomNavItem(
+            label = "我的",
+            normalIconRes = R.drawable.tab_mine_normal,
+            selectedIconRes = R.drawable.tab_mine_selected
+        )
     )
 
     val themeColor = MaterialTheme.colorScheme.primary
@@ -142,6 +157,7 @@ fun MainScreen(
                         val tint =
                             if (selected) themeColor
                             else MaterialTheme.colorScheme.onSurfaceVariant
+                        val iconRes = if (selected) item.selectedIconRes else item.normalIconRes
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(1.dp, Alignment.CenterVertically),
@@ -182,18 +198,18 @@ fun MainScreen(
                                         }
                                     ) {
                                         Icon(
-                                            imageVector = item.icon,
+                                            painter = painterResource(id = iconRes),
                                             contentDescription = item.label,
                                             modifier = Modifier.size(23.dp),
-                                            tint = tint
+                                            tint = Color.Unspecified
                                         )
                                     }
                                 } else {
                                     Icon(
-                                        imageVector = item.icon,
+                                        painter = painterResource(id = iconRes),
                                         contentDescription = item.label,
                                         modifier = Modifier.size(23.dp),
-                                        tint = tint
+                                        tint = Color.Unspecified
                                     )
                                 }
                             }

@@ -156,6 +156,7 @@ fun SquareScreen(
         isRefreshing = true
         try {
             luluRepository?.refreshWishlistTabData(uid)
+            AppDataStore.refreshWishlistProfileFromRemote()
             AppDataStore.reloadServicesFromDatabase()
         } catch (_: Exception) {
         } finally {
@@ -898,8 +899,10 @@ private fun WishlistGroupEditorDialog(
                         )
                         if (group != AppDataStore.DEFAULT_WISHLIST_GROUP) {
                             IconButton(onClick = {
-                                val ok = AppDataStore.deleteWishlistGroup(group)
-                                inlineMessage = if (ok) "已删除分组：$group" else "删除失败"
+                                scope.launch {
+                                    val ok = AppDataStore.deleteWishlistGroup(group)
+                                    inlineMessage = if (ok) "已删除分组：$group" else "删除失败"
+                                }
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除分组")
                             }
@@ -919,12 +922,14 @@ private fun WishlistGroupEditorDialog(
                 )
                 Button(
                     onClick = {
-                        val ok = AppDataStore.createWishlistGroup(newGroupName)
-                        inlineMessage = if (ok) {
-                            newGroupName = ""
-                            "已新增分组"
-                        } else {
-                            "分组名为空或已存在"
+                        scope.launch {
+                            val ok = AppDataStore.createWishlistGroup(newGroupName)
+                            inlineMessage = if (ok) {
+                                newGroupName = ""
+                                "已新增分组"
+                            } else {
+                                "分组名为空、已存在或同步失败"
+                            }
                         }
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -946,13 +951,15 @@ private fun WishlistGroupEditorDialog(
                     Button(
                         onClick = {
                             val source = renameFrom ?: return@Button
-                            val ok = AppDataStore.renameWishlistGroup(source, renameTo)
-                            inlineMessage = if (ok) {
-                                renameFrom = null
-                                renameTo = ""
-                                "已重命名分组"
-                            } else {
-                                "重命名失败（可能重名）"
+                            scope.launch {
+                                val ok = AppDataStore.renameWishlistGroup(source, renameTo)
+                                inlineMessage = if (ok) {
+                                    renameFrom = null
+                                    renameTo = ""
+                                    "已重命名分组"
+                                } else {
+                                    "重命名失败（可能重名或同步失败）"
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -1052,8 +1059,8 @@ private fun WishlistGroupEditorDialog(
                             inlineMessage = "请先输入目标分组"
                             return@Button
                         }
-                        AppDataStore.createWishlistGroup(targetGroup)
                         scope.launch {
+                            AppDataStore.createWishlistGroup(targetGroup)
                             picked.forEach { serviceId ->
                                 AppDataStore.addFavoriteServiceToGroup(serviceId, targetGroup)
                             }
