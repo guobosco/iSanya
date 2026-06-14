@@ -51,7 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.components.PrimaryGradientButton
 import com.example.Lulu.ui.theme.SuccessGreen
 import kotlinx.coroutines.delay
@@ -69,7 +69,7 @@ fun RealNameVerificationScreen(navController: NavController) {
     var livenessDone by remember { mutableStateOf(false) }
     var comparing by remember { mutableStateOf(false) }
     var matchOk by remember { mutableStateOf(false) }
-    val user by MockDataStore.currentUser.collectAsState()
+    val user by AppDataStore.currentUser.collectAsState()
     val scheme = MaterialTheme.colorScheme
 
     Scaffold(
@@ -162,7 +162,7 @@ fun RealNameVerificationScreen(navController: NavController) {
                     },
                     onFinish = {
                         if (user.id.isNotEmpty()) {
-                            MockDataStore.updateCurrentUser(
+                            AppDataStore.updateCurrentUser(
                                 user.copy(identityVerified = true, updatedAt = System.currentTimeMillis())
                             )
                         }

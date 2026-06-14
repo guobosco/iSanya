@@ -30,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.components.CommonAvatar
 private val PageBg = Color(0xFFFFFFFF)
 private val TitleInk = Color(0xFF000000)
@@ -42,7 +42,7 @@ fun HostServiceOrderDetailScreen(
     navController: NavController,
     orderId: String,
 ) {
-    val booking = remember(orderId) { MockDataStore.hostBookingByOrderId(orderId) }
+    val booking = remember(orderId) { AppDataStore.hostBookingByOrderId(orderId) }
 
     Scaffold(
         containerColor = PageBg,

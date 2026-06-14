@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { usePullDownRefresh } from '@tarojs/taro';
 import { Text, View } from '@tarojs/components';
 import styles from './index.module.scss';
 
@@ -25,8 +25,8 @@ const wishlistGroups: WishlistGroup[] = [
     count: 3,
     coverClass: styles.wishCoverA,
     services: [
-      { id: 'svc-01', title: '亚龙湾陪游半日线', meta: '陪游 · 第一次来三亚', price: '¥158起' },
-      { id: 'svc-02', title: '海棠湾包车出海', meta: '租车 · 半日路线', price: '¥388起' },
+      { id: 'svc-01', title: '亚龙湾地陪半日线', meta: '地陪 · 第一次来三亚', price: '¥158起' },
+      { id: 'svc-02', title: '海棠湾派对 DJ气氛组', meta: 'DJ气氛组 · 半日暖场', price: '¥388起' },
       { id: 'svc-03', title: '椰梦长廊落日旅拍', meta: '旅拍 · 90分钟', price: '¥299起' },
     ],
   },
@@ -36,7 +36,7 @@ const wishlistGroups: WishlistGroup[] = [
     count: 2,
     coverClass: styles.wishCoverB,
     services: [
-      { id: 'svc-04', title: '酒店上门按摩', meta: '按摩 · 60分钟', price: '¥168起' },
+      { id: 'svc-04', title: '海边体能唤醒私教', meta: '运动教练 · 60分钟', price: '¥168起' },
       { id: 'svc-05', title: '海边健身私教陪练', meta: '健身 · 1小时', price: '¥220起' },
     ],
   },
@@ -61,6 +61,12 @@ const wishlistGroups: WishlistGroup[] = [
 
 function WishlistPage() {
   const [selectedGroup, setSelectedGroup] = useState<WishlistGroup | null>(null);
+
+  usePullDownRefresh(() => {
+    setTimeout(() => {
+      Taro.stopPullDownRefresh();
+    }, 1000);
+  });
 
   return (
     <View className={styles.page}>

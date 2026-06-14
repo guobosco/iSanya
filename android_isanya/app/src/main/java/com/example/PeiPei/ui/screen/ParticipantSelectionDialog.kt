@@ -24,7 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.theme.DialogTitleTopPadding
@@ -36,9 +36,9 @@ fun ParticipantSelectionDialog(
     onDismiss: () -> Unit,
     onConfirm: (List<User>) -> Unit
 ) {
-    val contacts by MockDataStore.contacts.collectAsState()
-    val tags by MockDataStore.tags.collectAsState()
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val contacts by AppDataStore.contacts.collectAsState()
+    val tags by AppDataStore.tags.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
     
     val selected = remember { mutableStateListOf<User>().apply { addAll(initialSelection) } }
     

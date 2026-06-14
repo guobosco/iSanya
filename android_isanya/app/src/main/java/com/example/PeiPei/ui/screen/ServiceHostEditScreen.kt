@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.components.CommonAvatar
 import androidx.compose.foundation.clickable
@@ -47,7 +47,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
     val serviceHostTerm = stringResource(R.string.service_host_term)
 
     // Fetch global tags
-    val allTags by MockDataStore.tags.collectAsState()
+    val allTags by AppDataStore.tags.collectAsState()
     
     // Focus requesters
     val remarkNameFocus = remember { FocusRequester() }
@@ -58,7 +58,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
     // Fetch user
     LaunchedEffect(userId) {
         userId?.let {
-            user = MockDataStore.getUserById(it)
+            user = AppDataStore.getUserById(it)
         }
     }
 
@@ -245,7 +245,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
                             tags = selectedTags,
                             updatedAt = System.currentTimeMillis()
                         )
-                        MockDataStore.updateServiceHost(updatedUser)
+                        AppDataStore.updateServiceHost(updatedUser)
                         keyboardController?.hide()
                         Toast.makeText(context, "保存成功", Toast.LENGTH_SHORT).show()
                         navController.popBackStack()
@@ -301,7 +301,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
                                             Toast.LENGTH_SHORT
                                         ).show()
                                     } else {
-                                        MockDataStore.addTag(normalizedNewTag)
+                                        AppDataStore.addTag(normalizedNewTag)
                                         selectedTags = selectedTags + normalizedNewTag
                                         newTagText = ""
                                         keyboardController?.hide()
@@ -376,7 +376,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
                     TextButton(
                         onClick = {
                             userId?.let { 
-                                MockDataStore.deleteServiceHost(it)
+                                AppDataStore.deleteServiceHost(it)
                                 Toast.makeText(context, "已删除", Toast.LENGTH_SHORT).show()
                                 navController.popBackStack() // Back to list
                                 navController.popBackStack() // Back to home (service host list / add flow)

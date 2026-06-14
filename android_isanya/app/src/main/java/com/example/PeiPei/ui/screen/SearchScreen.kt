@@ -72,7 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.User
@@ -128,9 +128,9 @@ fun SearchScreen(navController: NavController) {
     val serviceHostTerm = stringResource(R.string.service_host_term)
 
     // Data sources
-    val contacts by MockDataStore.contacts.collectAsState()
-    val services by MockDataStore.services.collectAsState()
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val contacts by AppDataStore.contacts.collectAsState()
+    val services by AppDataStore.services.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
 
     val historyPrefs = remember(context, currentUser.id) {
         UserScopedPrefs.get(context, SEARCH_HISTORY_PREFS_BASE, currentUser.id)

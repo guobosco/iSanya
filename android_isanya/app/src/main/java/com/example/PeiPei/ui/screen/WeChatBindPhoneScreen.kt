@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.ui.navigation.Screen
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -53,11 +53,11 @@ fun WeChatBindPhoneScreen(navController: NavController) {
                 actions = {
                     TextButton(onClick = {
                         // 跳过绑定，直接生成 ID（lulu_wx_*）并跳转到完善资料
-                        val currentUser = MockDataStore.currentUser.value
+                        val currentUser = AppDataStore.currentUser.value
                         if (currentUser.peiPeiId.isEmpty()) {
                             val randomSuffix = Random.nextInt(100000, 999999)
                             val newLuluId = "lulu_wx_$randomSuffix"
-                            MockDataStore.updateCurrentUser(currentUser.copy(
+                            AppDataStore.updateCurrentUser(currentUser.copy(
                                 peiPeiId = newLuluId,
                                 updatedAt = System.currentTimeMillis()
                             ))
@@ -163,14 +163,14 @@ fun WeChatBindPhoneScreen(navController: NavController) {
                 onClick = {
                     if (phoneNumber.length == 11 && verifyCode.isNotEmpty()) {
                         // 绑定成功，更新用户信息
-                        val currentUser = MockDataStore.currentUser.value
+                        val currentUser = AppDataStore.currentUser.value
                         val updatedUser = currentUser.copy(
                             phoneNumber = phoneNumber,
                             isPhoneVerified = true,
                             peiPeiId = "lulu_$phoneNumber", // 绑定手机号后的 ID 规则
                             updatedAt = System.currentTimeMillis()
                         )
-                        MockDataStore.updateCurrentUser(updatedUser)
+                        AppDataStore.updateCurrentUser(updatedUser)
                         
                         // Save binding info locally for mock persistence
                         val sharedPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)

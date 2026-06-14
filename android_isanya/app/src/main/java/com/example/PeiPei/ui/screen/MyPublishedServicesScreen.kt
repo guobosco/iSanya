@@ -64,7 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.repository.LuluRepository
 import com.example.Lulu.ui.navigation.Screen
@@ -249,7 +249,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
                                                 Screen.CreateService.createRoute(serviceId = s.id)
                                             ) { launchSingleTop = true }
                                         },
-                                        Triple("重新发布", false) { MockDataStore.republishService(s.id) },
+                                        Triple("重新发布", false) { AppDataStore.republishService(s.id) },
                                         Triple("删除记录", true) { deleteRecordStep1Id = s.id },
                                     ),
                                 )
@@ -372,7 +372,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
                                                 Screen.CreateService.createRoute(serviceId = s.id)
                                             ) { launchSingleTop = true }
                                         },
-                                        Triple("重新发布", false) { MockDataStore.republishService(s.id) },
+                                        Triple("重新发布", false) { AppDataStore.republishService(s.id) },
                                         Triple("删除记录", true) { deleteRecordStep1Id = s.id },
                                     ),
                                 )
@@ -393,7 +393,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        MockDataStore.deleteService(unpublishTargetId!!)
+                        AppDataStore.deleteService(unpublishTargetId!!)
                         unpublishTargetId = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = ActionDangerColor),
@@ -438,7 +438,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
             confirmButton = {
                 TextButton(
                     onClick = {
-                        MockDataStore.purgeCreatedServiceRecord(deleteRecordStep2Id!!)
+                        AppDataStore.purgeCreatedServiceRecord(deleteRecordStep2Id!!)
                         deleteRecordStep2Id = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = ActionDangerColor),

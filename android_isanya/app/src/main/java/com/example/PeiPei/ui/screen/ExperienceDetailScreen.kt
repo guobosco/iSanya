@@ -110,7 +110,7 @@ import androidx.core.graphics.ColorUtils
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceDeclarations
@@ -222,10 +222,10 @@ fun ExperienceDetailScreen(
     val view = LocalView.current
     val cleanId = experienceId?.trim()
     val item = remember(cleanId) { cleanId?.let { experienceItemFromStableId(it) } }
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
     val isLoggedIn = currentUser.id.isNotEmpty()
-    val contacts by MockDataStore.contacts.collectAsState()
-    val chatRepository = MockDataStore.getRepository()
+    val contacts by AppDataStore.contacts.collectAsState()
+    val chatRepository = AppDataStore.getRepository()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(chatRepository) {
@@ -1426,7 +1426,7 @@ private fun ServiceInquiryDatePickerDialog(
             timeInMillis
         }
     }
-    val closureRoot by MockDataStore.hostCalendarDayClosures.collectAsState()
+    val closureRoot by AppDataStore.hostCalendarDayClosures.collectAsState()
     val closuresForService = remember(closureRoot, service.id) {
         closureRoot[service.id].orEmpty()
     }

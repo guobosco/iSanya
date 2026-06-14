@@ -82,7 +82,7 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import coil.size.Size
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.repository.LuluRepository
@@ -186,7 +186,7 @@ private fun abbrevChineseAdminSegment(segment: String): String {
 
 // 模拟数据模型 (UI 层)：瀑布流卡片与操作弹窗所需字段
 @Immutable
-data class MockEvent(
+data class ServiceEvent(
     val id: String,
     val title: String,
     val creatorId: String,
@@ -220,7 +220,7 @@ private fun extractCityLevelLocation(rawLocation: String, fallbackRegion: String
 
 @Immutable
 data class HomeFeedCardItem(
-    val event: MockEvent,
+    val event: ServiceEvent,
     val imageModel: Any?,
     val imageHeight: Dp,
     val infoText: String,
@@ -271,7 +271,7 @@ private fun resolveCoverImageModel(
     return uri
 }
 
-private fun MockEvent.toHomeFeedCardItem(resources: Resources): HomeFeedCardItem {
+private fun ServiceEvent.toHomeFeedCardItem(resources: Resources): HomeFeedCardItem {
     val safeIndex = id.hashCode().absoluteValue
     val categoryLabel = ServiceCategories.normalize(category)
     val locationLabel = formatLocationLabelCompact(publishCity).ifBlank { "发布地未知" }
@@ -303,9 +303,9 @@ fun HomeScreen(
     homeTabReselectTrigger: Int = 0
 ) {
     // 观察模拟数据
-    val currentUser by MockDataStore.currentUser.collectAsState()
-    val allServices by MockDataStore.services.collectAsState()
-    val favoriteServiceIds by MockDataStore.favoriteServiceIds.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
+    val allServices by AppDataStore.services.collectAsState()
+    val favoriteServiceIds by AppDataStore.favoriteServiceIds.collectAsState()
 
     val context = LocalContext.current
     val resources = context.resources
@@ -320,7 +320,7 @@ fun HomeScreen(
     val repository = remember { LuluRepository.get() }
     val squareDiscoveryServices by repository.squareDiscoveryServices.collectAsState(initial = emptyList())
     val roomUsers by repository.allUsers.collectAsState(initial = emptyList())
-    val chatRepository = remember { MockDataStore.getRepository() }
+    val chatRepository = remember { AppDataStore.getRepository() }
     val scope = rememberCoroutineScope()
     /** 本人 Room 全量 + 广场发现流；含 `seed-home-` 种子以便卡片进详情能解析 */
     val serviceByIdForHome = remember(squareDiscoveryServices, allServices) {
@@ -475,8 +475,7 @@ fun HomeScreen(
     LaunchedEffect(currentUserId) {
         if (currentUserId.isEmpty()) return@LaunchedEffect
         runCatching {
-            repository.ensureHomeFeedSeedDataIfEmpty()
-            MockDataStore.reloadServicesFromDatabase()
+            AppDataStore.reloadServicesFromDatabase()
         }
     }
 
@@ -492,7 +491,7 @@ fun HomeScreen(
 
     // 长按操作对话框
     var showActionDialog by remember { mutableStateOf(false) }
-    var selectedEventForAction by remember { mutableStateOf<MockEvent?>(null) }
+    var selectedEventForAction by remember { mutableStateOf<ServiceEvent?>(null) }
     if (showActionDialog && selectedEventForAction != null) {
         val event = selectedEventForAction!!
         AlertDialog(
@@ -514,7 +513,7 @@ fun HomeScreen(
                                             val group =
                                                 resolveWishlistCategoryGroupName(event.category)
                                             val result =
-                                                MockDataStore.addFavoriteServiceToGroup(event.id, group)
+                                                AppDataStore.addFavoriteServiceToGroup(event.id, group)
                                             if (result.favoriteIds.contains(event.id)) {
                                                 Toast.makeText(context, "已加入心愿单", Toast.LENGTH_SHORT)
                                                     .show()
@@ -550,7 +549,7 @@ fun HomeScreen(
                         onClick = {
                             showActionDialog = false
                             scope.launch {
-                                val creator = MockDataStore.getUserById(event.creatorId)
+                                val creator = AppDataStore.getUserById(event.creatorId)
                                 if (creator == null) {
                                     Toast.makeText(context, "暂未找到发布者信息", Toast.LENGTH_SHORT).show()
                                     return@launch
@@ -616,31 +615,15 @@ fun HomeScreen(
         )
     }
 
-    val homeSeedIdPrefix = remember(currentUserId) {
-        if (currentUserId.isEmpty()) ""
-        else "seed-home-$currentUserId-"
-    }
-    val homeSeedServices = remember(allServices, homeSeedIdPrefix) {
-        if (homeSeedIdPrefix.isEmpty()) emptyList()
-        else allServices.filter { !it.isDeleted && it.id.startsWith(homeSeedIdPrefix) }
-    }
-
-    // 推荐顺序：若已注入首页三亚种子，则瀑布流只展示种子；否则用广场发现流 API 数据。
     val feedItems = remember(
         squareDiscoveryServices,
-        homeSeedServices,
-        allServices,
-        homeSeedIdPrefix,
         roomUsers,
         resources,
         manualRefreshNonce,
         manualShuffleSeed,
         previousFirstPageIds
     ) {
-        val sortedServices = (
-            if (homeSeedServices.isNotEmpty()) homeSeedServices
-            else squareDiscoveryServices
-            ).sortedBy { it.id }
+        val sortedServices = squareDiscoveryServices.sortedBy { it.id }
         val regionByUserId = roomUsers.associate { it.id to it.region.orEmpty() }
         val creatorRegionById = sortedServices
             .asSequence()
@@ -648,7 +631,7 @@ fun HomeScreen(
             .distinct()
             .associateWith { creatorId ->
                 regionByUserId[creatorId].orEmpty().ifBlank {
-                    MockDataStore.getUserById(creatorId)?.region.orEmpty()
+                    AppDataStore.getUserById(creatorId)?.region.orEmpty()
                 }
             }
         val baseSeed = sortedServices.map { it.id }.joinToString().hashCode()
@@ -660,7 +643,7 @@ fun HomeScreen(
                 .shuffled(Random(seed))
                 .map { svc ->
                     val region = creatorRegionById[svc.creatorId].orEmpty()
-                    svc.toMockEvent(creatorRegionFallback = region).toHomeFeedCardItem(resources)
+                    svc.toServiceEvent(creatorRegionFallback = region).toHomeFeedCardItem(resources)
                 }
 
         val startSeed = if (manualShuffleSeed != 0) manualShuffleSeed else baseSeed
@@ -692,7 +675,7 @@ fun HomeScreen(
             var list = feedItems
             if (selectedCategoryFilter != ServiceCategories.FILTER_ALL) {
                 val want = ServiceCategories.normalize(selectedCategoryFilter)
-                // event.category 已在 toMockEvent 中规范化，避免每条重复 normalize
+                // event.category 已在 toServiceEvent 中规范化，避免每条重复 normalize
                 list = list.filter { it.event.category == want }
             }
             list
@@ -783,7 +766,7 @@ fun HomeScreen(
                 scope.launch {
                     togglingFavoriteIds = togglingFavoriteIds + serviceId
                     try {
-                        val result = MockDataStore.toggleFavoriteService(serviceId)
+                        val result = AppDataStore.toggleFavoriteService(serviceId)
                         val toastText = if (result.favoriteIds.contains(serviceId)) {
                             "已加入心愿单"
                         } else {
@@ -803,7 +786,7 @@ fun HomeScreen(
                             latestServicesById[serviceId]?.category
                         )
                         val result =
-                            MockDataStore.addFavoriteServiceToGroup(serviceId, group)
+                            AppDataStore.addFavoriteServiceToGroup(serviceId, group)
                         val toastText = if (result.favoriteIds.contains(serviceId)) {
                             "已加入心愿单"
                         } else {
@@ -923,7 +906,7 @@ fun HomeScreen(
                                             scope.launch {
                                                 togglingFavoriteIds = togglingFavoriteIds + item.event.id
                                                 try {
-                                                    val result = MockDataStore.toggleFavoriteService(item.event.id)
+                                                    val result = AppDataStore.toggleFavoriteService(item.event.id)
                                                     val toastText = if (result.favoriteIds.contains(item.event.id)) {
                                                         "已加入心愿单"
                                                     } else {
@@ -942,7 +925,7 @@ fun HomeScreen(
                                                     val group = resolveWishlistCategoryGroupName(
                                                         item.event.category
                                                     )
-                                                    val result = MockDataStore.addFavoriteServiceToGroup(
+                                                    val result = AppDataStore.addFavoriteServiceToGroup(
                                                         item.event.id,
                                                         group
                                                     )
@@ -1342,7 +1325,7 @@ private fun HomeFeedCoverImage(
     }
 }
 // 辅助扩展函数：将服务数据转换为首页瀑布流卡片模型（creator 地区由上层批量解析后传入，避免每条服务查用户）
-fun com.example.Lulu.data.model.Service.toMockEvent(creatorRegionFallback: String): MockEvent {
+fun com.example.Lulu.data.model.Service.toServiceEvent(creatorRegionFallback: String): ServiceEvent {
     val publishCity = extractCityLevelLocation(
         com.example.Lulu.util.ServiceLocationPolygonCodec.displayLine(this.location),
         creatorRegionFallback
@@ -1350,7 +1333,7 @@ fun com.example.Lulu.data.model.Service.toMockEvent(creatorRegionFallback: Strin
     val resolvedCover = coverImageUrl.ifBlank {
         imageUrls.firstOrNull { it.isNotBlank() }.orEmpty()
     }
-    return MockEvent(
+    return ServiceEvent(
         id = this.id,
         title = this.title,
         creatorId = this.creatorId,

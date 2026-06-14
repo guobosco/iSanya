@@ -13,7 +13,7 @@ import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
 import com.example.Lulu.data.local.AppDatabase
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.repository.LuluRepository
 import com.example.Lulu.service.NotificationService
 import com.example.Lulu.ui.MainActivity
@@ -90,8 +90,8 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
             RetrofitClient.apiService
         )
         
-        // Initialize MockDataStore proxy
-        MockDataStore.initialize(repository)
+        // Initialize AppDataStore proxy
+        AppDataStore.initialize(repository)
 
         // 无 token 时写入 demo 用户；首页瀑布流仅展示 Room 内真实同步数据（见 ServiceDao / fetchAndSyncDiscoveryServices）
         applicationScope.launch(startupExceptionHandler) {
@@ -234,6 +234,6 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
         )
 
         repository.addUser(defaultUser)
-        MockDataStore.replaceCurrentUser(defaultUser)
+        AppDataStore.replaceCurrentUser(defaultUser)
     }
 }

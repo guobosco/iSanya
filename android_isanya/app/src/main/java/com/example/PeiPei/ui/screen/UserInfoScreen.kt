@@ -70,7 +70,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
@@ -136,7 +136,7 @@ private fun MyProfileStatRow(
 fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val user by MockDataStore.currentUser.collectAsState()
+    val user by AppDataStore.currentUser.collectAsState()
     val isLoggedIn = user.id.isNotEmpty()
     val navigateToLogin: () -> Unit = {
         navController.navigate(Screen.Login.createRoute()) { launchSingleTop = true }
@@ -176,7 +176,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
         if (uri != null) {
             // 模拟更新头像
             Toast.makeText(context, "头像已更新 (模拟)", Toast.LENGTH_SHORT).show()
-            // MockDataStore.updateCurrentUser(user.copy(photoUrl = uri.toString()))
+            // AppDataStore.updateCurrentUser(user.copy(photoUrl = uri.toString()))
         }
     }
 
@@ -694,7 +694,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                                 .apply()
                             
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                MockDataStore.logout()
+                                AppDataStore.logout()
                                 showLogoutDialog = false
                             }
                         }
@@ -724,7 +724,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
             },
             onDismiss = { showNameDialog = false },
             onConfirm = { 
-                MockDataStore.updateCurrentUser(user.copy(name = it))
+                AppDataStore.updateCurrentUser(user.copy(name = it))
                 showNameDialog = false 
             }
         )
@@ -738,7 +738,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
             onDismiss = { showPhoneDialog = false },
             onConfirm = { 
                 // 修改手机号后，重置验证状态为 false
-                MockDataStore.updateCurrentUser(user.copy(phoneNumber = it, isPhoneVerified = false))
+                AppDataStore.updateCurrentUser(user.copy(phoneNumber = it, isPhoneVerified = false))
                 showPhoneDialog = false 
             }
         )
@@ -749,7 +749,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
             phoneNumber = user.phoneNumber,
             onDismiss = { showVerifyPhoneDialog = false },
             onConfirm = {
-                MockDataStore.updateCurrentUser(user.copy(isPhoneVerified = true))
+                AppDataStore.updateCurrentUser(user.copy(isPhoneVerified = true))
                 showVerifyPhoneDialog = false
                 Toast.makeText(context, "验证成功", Toast.LENGTH_SHORT).show()
             }
@@ -762,7 +762,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
             initialRegion = user.region,
             onDismiss = { showRegionDialog = false },
             onConfirm = { selectedRegion ->
-                MockDataStore.updateCurrentUser(user.copy(region = selectedRegion))
+                AppDataStore.updateCurrentUser(user.copy(region = selectedRegion))
                 showRegionDialog = false
             }
         )

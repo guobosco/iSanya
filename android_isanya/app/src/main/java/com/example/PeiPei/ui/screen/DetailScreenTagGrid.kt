@@ -70,13 +70,10 @@ fun iconVectorForDetailTagLabel(text: String): ImageVector {
     when (c) {
         ServiceCategories.LOCAL_GUIDE -> return Icons.Outlined.Map
         ServiceCategories.PHOTO -> return Icons.Outlined.PhotoCamera
-        ServiceCategories.DJ -> return Icons.Outlined.GraphicEq
-        ServiceCategories.ATMOSPHERE -> return Icons.Outlined.Celebration
-        ServiceCategories.MASSAGE -> return Icons.Outlined.Spa
+        ServiceCategories.DJ_ATMOSPHERE -> return Icons.Outlined.GraphicEq
         ServiceCategories.FITNESS_COACH -> return Icons.Outlined.FitnessCenter
         ServiceCategories.PRIVATE_CHEF -> return Icons.Outlined.Restaurant
         ServiceCategories.MAKEUP -> return Icons.Outlined.FaceRetouchingNatural
-        ServiceCategories.CAR_YACHT_RENTAL -> return Icons.Outlined.DirectionsCar
         ServiceCategories.OTHER -> return Icons.Outlined.Apps
     }
 

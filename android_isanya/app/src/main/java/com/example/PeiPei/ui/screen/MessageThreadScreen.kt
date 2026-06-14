@@ -76,7 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.ChatMessage
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
@@ -108,10 +108,10 @@ fun MessageThreadScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
     val density = LocalDensity.current
-    val repository = MockDataStore.getRepository()
+    val repository = AppDataStore.getRepository()
     val coroutineScope = rememberCoroutineScope()
-    val currentUser by MockDataStore.currentUser.collectAsState()
-    val contacts by MockDataStore.contacts.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
+    val contacts by AppDataStore.contacts.collectAsState()
     val services by (
         if (repository != null) {
             repository.allServices.collectAsState(initial = emptyList())
@@ -174,20 +174,20 @@ fun MessageThreadScreen(
             peerFromHydration = null
             return@LaunchedEffect
         }
-        val known = MockDataStore.getUserById(id)
+        val known = AppDataStore.getUserById(id)
         if (known != null) {
             peerFromHydration = null
             return@LaunchedEffect
         }
         peerFromHydration = null
-        val loaded = MockDataStore.getUserByIdSuspend(id)
+        val loaded = AppDataStore.getUserByIdSuspend(id)
         if (peerId?.trim() == id) {
             peerFromHydration = loaded
         }
     }
     val peer = remember(peerFromContacts, peerId, peerFromHydration) {
         peerFromContacts
-            ?: peerId?.let { MockDataStore.getUserById(it) }
+            ?: peerId?.let { AppDataStore.getUserById(it) }
             ?: peerFromHydration
     }
     val topBarTitle = remember(peer, conversation, peerId) {

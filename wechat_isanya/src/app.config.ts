@@ -10,11 +10,11 @@ export default defineAppConfig({
     'pages/publish/index',
   ],
   window: {
-    backgroundTextStyle: 'light',
+    backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#FFFFFF',
     navigationBarTitleText: 'i三亚',
     navigationBarTextStyle: 'black',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F7F7F7',
   },
   tabBar: {
     color: '#7B707A',

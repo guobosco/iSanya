@@ -51,7 +51,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.flowOf
 import androidx.compose.ui.platform.LocalContext
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 
 import androidx.compose.ui.unit.dp
@@ -91,7 +91,7 @@ fun MainScreen(
     }
     
     val context = LocalContext.current
-    val repository = remember { MockDataStore.getRepository() }
+    val repository = remember { AppDataStore.getRepository() }
     val snackbarHostState = remember { SnackbarHostState() }
     val unreadChatCount by (repository?.unreadChatCount?.collectAsState(initial = 0)
         ?: remember { mutableStateOf(0) })

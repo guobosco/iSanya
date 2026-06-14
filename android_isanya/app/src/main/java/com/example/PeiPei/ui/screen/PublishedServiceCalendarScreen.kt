@@ -61,7 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.HostCalendarDayClosure
 import com.example.Lulu.data.model.HostServiceBooking
 import com.example.Lulu.ui.components.CommonAvatar
@@ -129,13 +129,13 @@ fun PublishedServiceCalendarScreen(
     navController: NavController,
     serviceId: String,
 ) {
-    val services by MockDataStore.services.collectAsState()
+    val services by AppDataStore.services.collectAsState()
     val service = remember(services, serviceId) { services.find { it.id == serviceId } }
-    val bookingMap by MockDataStore.hostServiceBookings.collectAsState()
+    val bookingMap by AppDataStore.hostServiceBookings.collectAsState()
     val bookingsByDate = remember(bookingMap, serviceId) {
         bookingMap[serviceId].orEmpty().associateBy { it.dateIso }
     }
-    val closureRoot by MockDataStore.hostCalendarDayClosures.collectAsState()
+    val closureRoot by AppDataStore.hostCalendarDayClosures.collectAsState()
     val closuresByDate = remember(closureRoot, serviceId) {
         closureRoot[serviceId].orEmpty()
     }
@@ -152,7 +152,7 @@ fun PublishedServiceCalendarScreen(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val today = remember { LocalDate.now() }
     LaunchedEffect(serviceId) {
-        MockDataStore.ensureDemoHostBookingsIfEmpty(serviceId)
+        AppDataStore.ensureDemoHostBookingsIfEmpty(serviceId)
         selectedDate = today.toString()
     }
 
@@ -388,10 +388,10 @@ fun PublishedServiceCalendarScreen(
                         onClick = {
                             when (sheetMode) {
                                 CalendarDayBookSheetMode.OPEN.ordinal -> {
-                                    MockDataStore.setHostCalendarDayClosure(serviceId, iso, null)
+                                    AppDataStore.setHostCalendarDayClosure(serviceId, iso, null)
                                 }
                                 CalendarDayBookSheetMode.ALL_DAY.ordinal -> {
-                                    MockDataStore.setHostCalendarDayClosure(
+                                    AppDataStore.setHostCalendarDayClosure(
                                         serviceId,
                                         iso,
                                         HostCalendarDayClosure(allDay = true),
@@ -406,7 +406,7 @@ fun PublishedServiceCalendarScreen(
                                         }
                                         return@TextButton
                                     }
-                                    MockDataStore.setHostCalendarDayClosure(
+                                    AppDataStore.setHostCalendarDayClosure(
                                         serviceId,
                                         iso,
                                         HostCalendarDayClosure(

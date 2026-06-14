@@ -33,7 +33,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-object MockDataStore {
+object AppDataStore {
     const val DEFAULT_WISHLIST_GROUP = "默认分组"
     private const val WISHLIST_GROUPS_KEY = "wishlist_groups"
     private const val WISHLIST_GROUP_MAPPING_KEY = "wishlist_group_mapping"
@@ -43,7 +43,7 @@ object MockDataStore {
     fun getRepository(): LuluRepository? = repository
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
-        Log.e("MockDataStore", "Coroutine exception", throwable)
+        Log.e("AppDataStore", "Coroutine exception", throwable)
     }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + exceptionHandler)
 
@@ -85,46 +85,8 @@ object MockDataStore {
     fun hostBookingByOrderId(orderId: String): HostServiceBooking? =
         _hostServiceBookings.value.values.asSequence().flatten().firstOrNull { it.orderId == orderId }
 
-    /**
-     * 若该服务尚无演示预定数据，则写入几条未来日期的占位订单，便于日历展示头像。
-     */
     fun ensureDemoHostBookingsIfEmpty(serviceId: String) {
-        if (serviceId.isBlank()) return
-        val existing = _hostServiceBookings.value[serviceId].orEmpty()
-        if (existing.isNotEmpty()) return
-        val me = _currentUser.value.id
-        val guests = _contacts.value
-            .filter { it.id.isNotBlank() && it.id != me }
-            .distinctBy { it.id }
-            .take(4)
-        val pool = if (guests.isNotEmpty()) {
-            guests
-        } else {
-            listOf(
-                User(id = "demo-guest-a", name = "访客甲", photoUrl = ""),
-                User(id = "demo-guest-b", name = "访客乙", photoUrl = ""),
-                User(id = "demo-guest-c", name = "访客丙", photoUrl = ""),
-            )
-        }
-        val today = LocalDate.now()
-        val dates = listOf(
-            today.plusDays(3),
-            today.plusDays(7),
-            today.plusDays(14),
-            today.plusDays(21),
-        )
-        val bookings = dates.mapIndexed { i, d ->
-            val g = pool[i % pool.size]
-            HostServiceBooking(
-                orderId = "demo-order-$serviceId-${d}",
-                serviceId = serviceId,
-                dateIso = d.toString(),
-                guestUserId = g.id,
-                guestName = g.name.ifBlank { "预订用户" },
-                guestPhotoUrl = g.photoUrl,
-            )
-        }
-        _hostServiceBookings.value = _hostServiceBookings.value + (serviceId to bookings)
+        // Removed fake data generation.
     }
 
     /** 发布者日历：按服务、按日的「不可订」规则（本地）。 */

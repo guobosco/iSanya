@@ -63,7 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.HostCalendarDayClosure
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.ui.components.ServiceAreaReadOnlyMapCard
@@ -384,7 +384,7 @@ private fun ServiceDetailSchedulePickerSheetContent(
             timeInMillis
         }
     }
-    val closureRoot by MockDataStore.hostCalendarDayClosures.collectAsState()
+    val closureRoot by AppDataStore.hostCalendarDayClosures.collectAsState()
     val closuresForService = remember(closureRoot, hostCalendarServiceId) {
         if (hostCalendarServiceId.isNullOrBlank()) emptyMap()
         else closureRoot[hostCalendarServiceId].orEmpty()
@@ -617,7 +617,7 @@ fun ServiceDetailBookingPolicySections(
     scheduleBookingTimeRangesJson: String = "",
     scheduleBookingLeadHours: Float = BookingTimeRangesCodec.DEFAULT_BOOKING_LEAD_HOURS,
     scheduleBookingFutureOpenDays: Int = BookingTimeRangesCodec.DEFAULT_BOOKING_FUTURE_OPEN_DAYS,
-    /** 与 MockDataStore 预定日历闭店一致；null 表示不在此层过滤闭店。 */
+    /** 与 AppDataStore 预定日历闭店一致；null 表示不在此层过滤闭店。 */
     scheduleHostCalendarServiceId: String? = null,
     serviceDeclarationsSubtitle: String,
     serviceDeclarationsReaderBody: String,

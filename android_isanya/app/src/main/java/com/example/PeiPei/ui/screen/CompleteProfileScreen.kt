@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.ui.components.RegionPickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -59,7 +59,7 @@ fun CompleteProfileScreen(navController: NavController) {
     val isDarkTheme = isSystemInDarkTheme()
     val backgroundColor = if (isDarkTheme) Color.Black else Color.White
     
-    val currentUser = MockDataStore.currentUser.collectAsState().value
+    val currentUser = AppDataStore.currentUser.collectAsState().value
     val avatarInitial = currentUser.name.trim().firstOrNull()?.toString() ?: "?"
     
     var gender by remember { mutableStateOf(currentUser.gender) }
@@ -108,18 +108,18 @@ fun CompleteProfileScreen(navController: NavController) {
             coroutineScope.launch {
                 isSaving = true
                 try {
-                    val repository = MockDataStore.getRepository()
+                    val repository = AppDataStore.getRepository()
                     if (repository != null) {
                         Toast.makeText(context, "正在上传头像...", Toast.LENGTH_SHORT).show()
                         val serverUrl = com.example.Lulu.util.AvatarUploadUtil.processAndUploadAvatar(context, croppedUri, repository)
                         if (serverUrl != null) {
-                            val updatedUser = MockDataStore.currentUser.value.copy(
+                            val updatedUser = AppDataStore.currentUser.value.copy(
                                 photoUrl = serverUrl,
                                 updatedAt = System.currentTimeMillis()
                             )
                             val result = repository.syncCurrentUserProfile(updatedUser)
                             result.onSuccess { savedUser ->
-                                MockDataStore.replaceCurrentUser(savedUser)
+                                AppDataStore.replaceCurrentUser(savedUser)
                                 Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
                             }.onFailure { error ->
                                 Toast.makeText(context, error.message ?: "头像保存失败，请重试", Toast.LENGTH_SHORT).show()
@@ -320,7 +320,7 @@ fun CompleteProfileScreen(navController: NavController) {
                     }
                     coroutineScope.launch {
                         isSaving = true
-                        val user = MockDataStore.currentUser.value
+                        val user = AppDataStore.currentUser.value
                         val updatedUser = user.copy(
                             gender = gender,
                             region = region,
@@ -328,10 +328,10 @@ fun CompleteProfileScreen(navController: NavController) {
                             isProfileCompleted = true,
                             updatedAt = System.currentTimeMillis()
                         )
-                        val repository = MockDataStore.getRepository()
+                        val repository = AppDataStore.getRepository()
                         val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)
                         result.onSuccess { savedUser ->
-                            MockDataStore.replaceCurrentUser(savedUser)
+                            AppDataStore.replaceCurrentUser(savedUser)
                             val sharedPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                             val phone = savedUser.phoneNumber
                             if (phone.isNotEmpty()) {

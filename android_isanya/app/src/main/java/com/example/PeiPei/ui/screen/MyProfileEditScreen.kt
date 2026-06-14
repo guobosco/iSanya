@@ -39,7 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.heightWeightEditRowValue
 import com.example.Lulu.ui.components.ProfileHeightWeightBottomSheet
 import com.example.Lulu.ui.components.ProfileInterestsPickerDialog
@@ -106,7 +106,7 @@ private fun MyProfileEditContent(
     onClose: () -> Unit,
     containerColor: Color = MaterialTheme.colorScheme.surface
 ) {
-    val user by MockDataStore.currentUser.collectAsState()
+    val user by AppDataStore.currentUser.collectAsState()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -170,18 +170,18 @@ private fun MyProfileEditContent(
             coroutineScope.launch {
                 isAvatarSaving = true
                 try {
-                    val repository = MockDataStore.getRepository()
+                    val repository = AppDataStore.getRepository()
                     if (repository != null) {
                         Toast.makeText(context, "正在上传头像...", Toast.LENGTH_SHORT).show()
                         val serverUrl = com.example.Lulu.util.AvatarUploadUtil.processAndUploadAvatar(context, croppedUri, repository)
                         if (serverUrl != null) {
-                            val updatedUser = MockDataStore.currentUser.value.copy(
+                            val updatedUser = AppDataStore.currentUser.value.copy(
                                 photoUrl = serverUrl,
                                 updatedAt = System.currentTimeMillis()
                             )
                             val result = repository.syncCurrentUserProfile(updatedUser)
                             result.onSuccess { savedUser ->
-                                MockDataStore.replaceCurrentUser(savedUser)
+                                AppDataStore.replaceCurrentUser(savedUser)
                                 Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
                             }.onFailure { error ->
                                 Toast.makeText(context, error.message ?: "头像保存失败，请重试", Toast.LENGTH_SHORT).show()
@@ -238,18 +238,18 @@ private fun MyProfileEditContent(
                         coroutineScope.launch {
                             isProfileSyncing = true
                             try {
-                                var u = MockDataStore.currentUser.value
+                                var u = AppDataStore.currentUser.value
                                 val trimmed = u.signature.trim()
                                 if (trimmed != u.signature) {
                                     u = u.copy(signature = trimmed, updatedAt = System.currentTimeMillis())
-                                    MockDataStore.updateCurrentUser(u)
+                                    AppDataStore.updateCurrentUser(u)
                                 }
-                                val latest = MockDataStore.currentUser.value
-                                val repository = MockDataStore.getRepository()
+                                val latest = AppDataStore.currentUser.value
+                                val repository = AppDataStore.getRepository()
                                 val result = repository?.syncCurrentUserProfile(latest)
                                     ?: Result.success(latest)
                                 result.onSuccess { savedUser ->
-                                    MockDataStore.replaceCurrentUser(savedUser)
+                                    AppDataStore.replaceCurrentUser(savedUser)
                                     Toast.makeText(context, "资料已保存", Toast.LENGTH_SHORT).show()
                                     onClose()
                                 }.onFailure { error ->
@@ -520,8 +520,8 @@ private fun MyProfileEditContent(
                                     value = user.signature,
                                     onValueChange = { new: String ->
                                         if (new.length <= 500) {
-                                            val latest = MockDataStore.currentUser.value
-                                            MockDataStore.updateCurrentUser(
+                                            val latest = AppDataStore.currentUser.value
+                                            AppDataStore.updateCurrentUser(
                                                 latest.copy(signature = new, updatedAt = System.currentTimeMillis())
                                             )
                                         }
@@ -639,7 +639,7 @@ private fun MyProfileEditContent(
             },
             onDismiss = { showNameDialog = false },
             onSave = {
-                MockDataStore.updateCurrentUser(user.copy(name = it, updatedAt = System.currentTimeMillis()))
+                AppDataStore.updateCurrentUser(user.copy(name = it, updatedAt = System.currentTimeMillis()))
                 showNameDialog = false
             }
         )
@@ -663,7 +663,7 @@ private fun MyProfileEditContent(
             onDismiss = { showIdDialog = false },
             onSave = {
                 val newCount = if (user.lastIdModificationYear == currentYear) user.idModificationCount + 1 else 1
-                MockDataStore.updateCurrentUser(
+                AppDataStore.updateCurrentUser(
                     user.copy(
                         peiPeiId = it,
                         updatedAt = System.currentTimeMillis(),
@@ -689,7 +689,7 @@ private fun MyProfileEditContent(
             onInfoLinkClick = { Toast.makeText(context, "功能开发中", Toast.LENGTH_SHORT).show() },
             onDismiss = { showPhoneDialog = false },
             onSave = {
-                MockDataStore.updateCurrentUser(
+                AppDataStore.updateCurrentUser(
                     user.copy(phoneNumber = it, isPhoneVerified = false, updatedAt = System.currentTimeMillis())
                 )
                 showPhoneDialog = false
@@ -703,7 +703,7 @@ private fun MyProfileEditContent(
             initialRegion = user.region,
             onDismiss = { showRegionDialog = false },
             onConfirm = { 
-                MockDataStore.updateCurrentUser(user.copy(region = it, updatedAt = System.currentTimeMillis()))
+                AppDataStore.updateCurrentUser(user.copy(region = it, updatedAt = System.currentTimeMillis()))
                 showRegionDialog = false
             }
         )
@@ -717,7 +717,7 @@ private fun MyProfileEditContent(
             initialSelection = user.gender,
             onDismiss = { showGenderDialog = false },
             onPick = { picked ->
-                MockDataStore.updateCurrentUser(user.copy(gender = picked, updatedAt = System.currentTimeMillis()))
+                AppDataStore.updateCurrentUser(user.copy(gender = picked, updatedAt = System.currentTimeMillis()))
                 showGenderDialog = false
             }
         )
@@ -735,7 +735,7 @@ private fun MyProfileEditContent(
             initialSelection = user.birthDecade,
             onDismiss = { showBirthDecadeDialog = false },
             onPick = { picked ->
-                MockDataStore.updateCurrentUser(
+                AppDataStore.updateCurrentUser(
                     user.copy(birthDecade = picked, updatedAt = System.currentTimeMillis())
                 )
                 showBirthDecadeDialog = false
@@ -752,7 +752,7 @@ private fun MyProfileEditContent(
             maxLength = 80,
             onDismiss = { showMiddleSchoolSongDialog = false },
             onSave = {
-                MockDataStore.updateCurrentUser(
+                AppDataStore.updateCurrentUser(
                     user.copy(middleSchoolFavoriteSong = it.trim(), updatedAt = System.currentTimeMillis())
                 )
                 showMiddleSchoolSongDialog = false
@@ -769,7 +769,7 @@ private fun MyProfileEditContent(
             maxLength = 60,
             onDismiss = { showJobTitleDialog = false },
             onSave = {
-                MockDataStore.updateCurrentUser(
+                AppDataStore.updateCurrentUser(
                     user.copy(jobTitle = it.trim(), updatedAt = System.currentTimeMillis())
                 )
                 showJobTitleDialog = false
@@ -782,8 +782,8 @@ private fun MyProfileEditContent(
             initialSelected = user.tags.toSet(),
             onDismissRequest = { showInterestsPicker = false },
             onSave = { labels ->
-                val latest = MockDataStore.currentUser.value
-                MockDataStore.updateCurrentUser(
+                val latest = AppDataStore.currentUser.value
+                AppDataStore.updateCurrentUser(
                     latest.copy(tags = labels, updatedAt = System.currentTimeMillis())
                 )
                 showInterestsPicker = false
@@ -798,8 +798,8 @@ private fun MyProfileEditContent(
             maxLength = 80,
             onDismiss = { showEducationDialog = false },
             onSave = { picked ->
-                val latest = MockDataStore.currentUser.value
-                MockDataStore.updateCurrentUser(
+                val latest = AppDataStore.currentUser.value
+                AppDataStore.updateCurrentUser(
                     latest.copy(education = picked.trim(), updatedAt = System.currentTimeMillis())
                 )
                 showEducationDialog = false
@@ -808,15 +808,15 @@ private fun MyProfileEditContent(
     }
 
     if (showHeightWeightDialog) {
-        val latest = MockDataStore.currentUser.value
+        val latest = AppDataStore.currentUser.value
         ProfileHeightWeightBottomSheet(
             heightCm = latest.heightCm,
             weightKg = latest.weightKg,
             heightWeightPrivate = latest.heightWeightPrivate,
             onDismiss = { showHeightWeightDialog = false },
             onSave = { h, w, p ->
-                val u = MockDataStore.currentUser.value
-                MockDataStore.updateCurrentUser(
+                val u = AppDataStore.currentUser.value
+                AppDataStore.updateCurrentUser(
                     u.copy(
                         heightCm = h,
                         weightKg = w,

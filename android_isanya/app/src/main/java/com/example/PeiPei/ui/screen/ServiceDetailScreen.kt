@@ -2,14 +2,15 @@
 
 package com.example.Lulu.ui.screen
 
-import androidx.activity.compose.BackHandler
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.background
@@ -96,6 +97,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -113,11 +115,12 @@ import androidx.core.graphics.ColorUtils
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.ServiceDeclarations
+import com.example.Lulu.data.repository.UserRepository
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.ui.viewmodel.PendingHostProfileHint
 import com.example.Lulu.ui.theme.BrandPink
@@ -156,7 +159,7 @@ private fun applyCreatorPriceAndRulesFromSettings(
     fullRefundCancelLeadDays: Int,
     serviceMode: String,
 ) {
-    MockDataStore.updateService(
+    AppDataStore.updateService(
         id = base.id,
         title = base.title,
         note = base.description,
@@ -242,22 +245,26 @@ fun ServiceDetailScreen(
     /** 从「我发布的」等入口直达改价半层时置 true，仅首次进入消费一次 */
     openCreatorPriceOnLaunch: Boolean = false,
 ) {
+    val context = LocalContext.current
     val popNav = mainShellNavController ?: rootNavController
+    val userRepository = remember(context) {
+        UserRepository(context.applicationContext as Application)
+    }
     val view = LocalView.current
     val cleanId = serviceId?.trim()
     val serviceFlow = remember(cleanId) {
         if (cleanId.isNullOrEmpty()) {
             kotlinx.coroutines.flow.flowOf<com.example.Lulu.data.model.Service?>(null)
         } else {
-            MockDataStore.getServiceFlow(cleanId)
+            AppDataStore.getServiceFlow(cleanId)
         }
     }
     val service by serviceFlow.collectAsState(initial = null)
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
     val isLoggedIn = currentUser.id.isNotEmpty()
-    val contacts by MockDataStore.contacts.collectAsState()
-    val favoriteServiceIds by MockDataStore.favoriteServiceIds.collectAsState()
-    val chatRepository = MockDataStore.getRepository()
+    val contacts by AppDataStore.contacts.collectAsState()
+    val favoriteServiceIds by AppDataStore.favoriteServiceIds.collectAsState()
+    val chatRepository = AppDataStore.getRepository()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     LaunchedEffect(chatRepository) {
@@ -324,7 +331,13 @@ fun ServiceDetailScreen(
         service!!.coverImageUrl.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList()
     }
     val creatorUser = remember(service!!.creatorId, contacts, currentUser) {
-        MockDataStore.getUserById(service!!.creatorId)
+        AppDataStore.getUserById(service!!.creatorId)
+    }
+    LaunchedEffect(service!!.creatorId, creatorUser?.photoUrl) {
+        val creatorId = service!!.creatorId.trim()
+        if (creatorId.isBlank()) return@LaunchedEffect
+        if (!creatorUser?.photoUrl.isNullOrBlank()) return@LaunchedEffect
+        userRepository.fetchAndCacheUserById(creatorId)
     }
     val creatorName = creatorUser?.remarkName?.ifBlank { creatorUser.name }
         ?.ifBlank { service!!.creator.ifBlank { "发布者" } }
@@ -389,7 +402,7 @@ fun ServiceDetailScreen(
                         scope.launch {
                             isTogglingFavorite = true
                             try {
-                                val result = MockDataStore.toggleFavoriteService(service!!.id)
+                                val result = AppDataStore.toggleFavoriteService(service!!.id)
                                 val message = if (result.favoriteIds.contains(service!!.id)) {
                                     "已加入心愿单"
                                 } else {
@@ -548,7 +561,7 @@ fun ServiceDetailScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        MockDataStore.deleteService(service!!.id)
+                        AppDataStore.deleteService(service!!.id)
                         showUnpublishConfirm = false
                         handleServiceDetailBack()
                     }
@@ -796,7 +809,7 @@ fun ServiceDetailScreen(
                                     isTogglingFavorite = true
                                     try {
                                         val group = ServiceCategories.normalize(service!!.category)
-                                        val result = MockDataStore.addFavoriteServiceToGroup(
+                                        val result = AppDataStore.addFavoriteServiceToGroup(
                                             service!!.id,
                                             group
                                         )
@@ -1635,7 +1648,7 @@ private fun ServiceInquiryDatePickerDialog(
             timeInMillis
         }
     }
-    val closureRoot by MockDataStore.hostCalendarDayClosures.collectAsState()
+    val closureRoot by AppDataStore.hostCalendarDayClosures.collectAsState()
     val closuresForService = remember(closureRoot, service.id) {
         closureRoot[service.id].orEmpty()
     }

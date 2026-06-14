@@ -87,7 +87,7 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavController
 import androidx.core.view.WindowCompat
 import coil.compose.AsyncImage
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.repository.LuluRepository
@@ -119,11 +119,11 @@ fun SquareScreen(
     val primaryText = if (isDarkTheme) Color(0xFFF2F2F2) else Color(0xFF161616)
     val secondaryText = if (isDarkTheme) Color(0xFFA2A2A2) else Color(0xFF727272)
 
-    val services by MockDataStore.services.collectAsState()
-    val favoriteServiceIds by MockDataStore.favoriteServiceIds.collectAsState()
-    val wishlistGroups by MockDataStore.wishlistGroups.collectAsState()
-    val favoriteServiceGroups by MockDataStore.favoriteServiceGroups.collectAsState()
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val services by AppDataStore.services.collectAsState()
+    val favoriteServiceIds by AppDataStore.favoriteServiceIds.collectAsState()
+    val wishlistGroups by AppDataStore.wishlistGroups.collectAsState()
+    val favoriteServiceGroups by AppDataStore.favoriteServiceGroups.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
     val scope = rememberCoroutineScope()
     val serviceDetailNav = mainShellNavController ?: navController
     var showGroupEditor by remember { mutableStateOf(false) }
@@ -142,7 +142,7 @@ fun SquareScreen(
         initialFirstVisibleItemIndex = savedRootFirstVisibleIndex,
         initialFirstVisibleItemScrollOffset = savedRootFirstVisibleOffset
     )
-    val chatRepository = remember { MockDataStore.getRepository() }
+    val chatRepository = remember { AppDataStore.getRepository() }
     val luluRepository = remember { runCatching { LuluRepository.get() }.getOrNull() }
 
     var isRefreshing by remember { mutableStateOf(false) }
@@ -156,7 +156,7 @@ fun SquareScreen(
         isRefreshing = true
         try {
             luluRepository?.refreshWishlistTabData(uid)
-            MockDataStore.reloadServicesFromDatabase()
+            AppDataStore.reloadServicesFromDatabase()
         } catch (_: Exception) {
         } finally {
             delay(400)
@@ -171,7 +171,7 @@ fun SquareScreen(
 
     val wishedServices = services.filter { favoriteServiceIds.contains(it.id) && !it.isDeleted }
     val groupedWishlists = wishedServices
-        .groupBy { service -> MockDataStore.getFavoriteGroupForService(service.id) }
+        .groupBy { service -> AppDataStore.getFavoriteGroupForService(service.id) }
         .map { (name, list) ->
             WishlistGroup(
                 key = name + list.firstOrNull()?.id.orEmpty(),
@@ -472,7 +472,7 @@ private fun WishlistExpandedServiceCard(
 ) {
     /** 与首页体验 Tab 封面一致；图片区独立 Surface，与下方文案 sibling，无衔接灰三角问题 */
     val coverShape = RoundedCornerShape(14.dp)
-    val creator = remember(service.creatorId) { MockDataStore.getUserById(service.creatorId) }
+    val creator = remember(service.creatorId) { AppDataStore.getUserById(service.creatorId) }
     val imageUrls = remember(service.coverImageUrl, service.imageUrls) {
         buildList {
             service.coverImageUrl.takeIf { it.isNotBlank() }?.let(::add)
@@ -866,9 +866,9 @@ private fun WishlistGroupEditorDialog(
     var inlineMessage by remember { mutableStateOf<String?>(null) }
     var bulkGroupName by remember(groups) {
         mutableStateOf(
-            groups.firstOrNull { it == MockDataStore.DEFAULT_WISHLIST_GROUP }
+            groups.firstOrNull { it == AppDataStore.DEFAULT_WISHLIST_GROUP }
                 ?: groups.firstOrNull()
-                ?: MockDataStore.DEFAULT_WISHLIST_GROUP
+                ?: AppDataStore.DEFAULT_WISHLIST_GROUP
         )
     }
     var selectedServiceIds by remember { mutableStateOf(setOf<String>()) }
@@ -890,15 +890,15 @@ private fun WishlistGroupEditorDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .clickable {
-                                    if (group != MockDataStore.DEFAULT_WISHLIST_GROUP) {
+                                    if (group != AppDataStore.DEFAULT_WISHLIST_GROUP) {
                                         renameFrom = group
                                         renameTo = group
                                     }
                                 }
                         )
-                        if (group != MockDataStore.DEFAULT_WISHLIST_GROUP) {
+                        if (group != AppDataStore.DEFAULT_WISHLIST_GROUP) {
                             IconButton(onClick = {
-                                val ok = MockDataStore.deleteWishlistGroup(group)
+                                val ok = AppDataStore.deleteWishlistGroup(group)
                                 inlineMessage = if (ok) "已删除分组：$group" else "删除失败"
                             }) {
                                 Icon(Icons.Default.Delete, contentDescription = "删除分组")
@@ -919,7 +919,7 @@ private fun WishlistGroupEditorDialog(
                 )
                 Button(
                     onClick = {
-                        val ok = MockDataStore.createWishlistGroup(newGroupName)
+                        val ok = AppDataStore.createWishlistGroup(newGroupName)
                         inlineMessage = if (ok) {
                             newGroupName = ""
                             "已新增分组"
@@ -946,7 +946,7 @@ private fun WishlistGroupEditorDialog(
                     Button(
                         onClick = {
                             val source = renameFrom ?: return@Button
-                            val ok = MockDataStore.renameWishlistGroup(source, renameTo)
+                            val ok = AppDataStore.renameWishlistGroup(source, renameTo)
                             inlineMessage = if (ok) {
                                 renameFrom = null
                                 renameTo = ""
@@ -1052,10 +1052,10 @@ private fun WishlistGroupEditorDialog(
                             inlineMessage = "请先输入目标分组"
                             return@Button
                         }
-                        MockDataStore.createWishlistGroup(targetGroup)
+                        AppDataStore.createWishlistGroup(targetGroup)
                         scope.launch {
                             picked.forEach { serviceId ->
-                                MockDataStore.addFavoriteServiceToGroup(serviceId, targetGroup)
+                                AppDataStore.addFavoriteServiceToGroup(serviceId, targetGroup)
                             }
                             inlineMessage = "已将${picked.size}个服务加入分组：$targetGroup"
                             selectedServiceIds = emptySet()

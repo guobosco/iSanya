@@ -359,11 +359,15 @@ def ensure_seed_users(db: Session, total: int = 20):
         user_id = f"seed-user-{index:02d}"
         existing = db.query(models.User).filter(models.User.id == user_id).first()
         payload = build_seed_user_payload(index)
+        # Update avatar
+        avatar_idx = ((index - 1) % 20) + 1
+        payload["photo_url"] = f"static/avatars/avatar_{avatar_idx:02d}.jpg?v=2"
+        
         if existing is None:
             db.add(models.User(**payload))
             continue
         # 种子账号：昵称与签名始终与代码定义一致，避免历史库里姓名重复或过旧
-        seed_identity_keys = {"name", "signature", "pei_pei_id", "email"}
+        seed_identity_keys = {"name", "signature", "pei_pei_id", "email", "photo_url"}
         for key, value in payload.items():
             if key in {"id", "hashed_password", "created_at"}:
                 continue
@@ -375,49 +379,30 @@ def ensure_seed_users(db: Session, total: int = 20):
     db.commit()
 
 
-def ensure_seed_discovery_services(db: Session, count: int = 72):
+def ensure_seed_discovery_services(db: Session, count: int = 100):
     """
     保证 /services/discovery 在开发库中有足够可展示数据（幂等，固定 id）。
     依赖 ensure_seed_users 已创建 seed-user-01..20。
     """
     # 与客户端 ServiceCategories.PRESETS 顺序一致，保证每类至少有一条（count≥10 时循环覆盖）
     seed_category_presets = [
-        "陪游",
+        "地陪",
         "摄影",
-        "DJ",
-        "气氛组",
-        "上门按摩",
+        "DJ气氛组",
         "运动教练",
         "私厨",
         "化妆",
-        "租车游艇",
         "其他服务",
     ]
     seed_titles = [
-        "三亚亚龙湾·海棠湾一日陪游｜错峰动线",
+        "三亚亚龙湾·海棠湾一日地陪｜错峰动线",
         "椰梦长廊日落旅拍｜轻胶片氛围",
-        "海棠湾露台派对 DJ｜House/流行稳接歌",
-        "亚龙湾别墅轰趴气氛组｜破冰带玩",
-        "三亚湾酒店上门精油推拿｜肩颈深松",
+        "海棠湾露台派对 DJ气氛组｜House/暖场稳接",
         "海棠湾酒店健身房塑形私教",
         "三亚上门琼味海鲜私厨｜4–6 人桌",
         "旅拍度假妆发一体｜扛汗持久定妆",
-        "三亚 GL8 包车+游艇半日联动",
         "cdf 三亚免税动线陪同｜少折返",
     ]
-    # 与 seed_category_presets 顺序一一对应，用于占位图 seed（ASCII，避免 URL 编码问题）
-    seed_pic_slugs = (
-        "guide",
-        "photo",
-        "dj",
-        "vibe",
-        "massage",
-        "coach",
-        "chef",
-        "makeup",
-        "boat",
-        "misc",
-    )
     titles = []
     for i in range(max(count, len(seed_titles))):
         base = seed_titles[i % len(seed_titles)]
@@ -455,8 +440,6 @@ def ensure_seed_discovery_services(db: Session, count: int = 72):
     now = int(time.time() * 1000)
     for i in range(1, count + 1):
         sid = f"seed-discovery-svc-{i:02d}"
-        if db.query(models.Service).filter(models.Service.id == sid).first() is not None:
-            continue
         creator_id = f"seed-user-{((i - 1) % 20) + 1:02d}"
         if db.query(models.User).filter(models.User.id == creator_id).first() is None:
             continue
@@ -469,15 +452,36 @@ def ensure_seed_discovery_services(db: Session, count: int = 72):
         loc = locs[(i - 1) % len(locs)]
         cat_idx = (i - 1) % len(seed_category_presets)
         category = seed_category_presets[cat_idx]
-        pic_slug = seed_pic_slugs[cat_idx]
-        # 占位图 seed 含类目 slug，与标题/类目一一对应；同条记录封面与图集风格稳定
-        cover = f"https://picsum.photos/seed/sanya-{pic_slug}-{sid}/720/960"
-        imgs = [
-            f"https://picsum.photos/seed/sanya-{pic_slug}-{sid}a/640/800",
-            f"https://picsum.photos/seed/sanya-{pic_slug}-{sid}b/640/800",
-        ] if i % 3 != 0 else [f"https://picsum.photos/seed/sanya-{pic_slug}-{sid}c/640/640"]
+        
+        # 每个服务分配 5 张不同的本地图片（共 500 张）
+        start_img_idx = ((i - 1) % 100) * 5 + 1
+        cover = f"static/services/sanya_service_{start_img_idx:03d}.jpg?v=2"
+        imgs = [f"static/services/sanya_service_{idx:03d}.jpg?v=2" for idx in range(start_img_idx, start_img_idx + 5)]
         peer = f"seed-user-{((i + 3) % 20) + 1:02d}"
         participants = [] if i % 5 != 0 else [creator_id, peer]
+        
+        existing = db.query(models.Service).filter(models.Service.id == sid).first()
+        if existing is not None:
+            existing.title = title
+            existing.description = desc
+            existing.cover_image_url = cover
+            existing.image_urls = imgs
+            existing.location = loc
+            existing.price_text = price_opts[(i - 1) % len(price_opts)]
+            existing.price_basis_text = "种子数据 · 计价以沟通确认为准"
+            existing.category = category
+            existing.service_mode = mode_opts[(i - 1) % len(mode_opts)]
+            existing.service_time = int([60, 90, 120, 150, 180, 240, 360][i % 7])
+            existing.sync_to_square = True
+            existing.participant_ids = participants
+            existing.creator = name_by_uid.get(creator_id, "")
+            existing.creator_id = creator_id
+            existing.is_important = (i % 10 == 0)
+            existing.updated_at = now - i * 22_000
+            existing.is_deleted = False
+            existing.is_synced = True
+            continue
+            
         db.add(
             models.Service(
                 id=sid,
@@ -960,7 +964,7 @@ def list_square_discovery_services(
 def read_service_detail(
     service_id: str,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: Optional[models.User] = Depends(get_optional_current_user)
 ):
     db_item = db.query(models.Service).filter(
         models.Service.id == service_id,

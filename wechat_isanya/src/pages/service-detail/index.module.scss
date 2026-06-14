@@ -106,20 +106,20 @@
 
 .panel {
   position: relative;
-  margin-top: -44rpx;
-  border-radius: 36rpx 36rpx 0 0;
+  margin-top: -56rpx;
+  border-radius: 56rpx 56rpx 0 0;
   background: #ffffff;
-  padding: 24rpx 32rpx 0;
+  padding: 40rpx 32rpx 16rpx;
   z-index: 2;
 }
 
 .title {
   display: block;
-  color: #111111;
+  color: #000000;
   text-align: center;
   font-size: 48rpx;
   font-weight: 700;
-  line-height: 62rpx;
+  line-height: 60rpx;
 }
 
 .meta {
@@ -421,7 +421,7 @@
   display: flex;
   align-items: center;
   gap: 20rpx;
-  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.06);
   z-index: 10;
@@ -434,24 +434,25 @@
 
 .bottomPrice {
   display: block;
-  color: #171717;
-  font-size: 34rpx;
+  color: #000000;
+  font-size: 52rpx;
   font-weight: 700;
-  line-height: 44rpx;
+  line-height: 60rpx;
+  text-decoration: underline;
 }
 
 .bottomPriceMeta {
   display: block;
-  margin-top: 4rpx;
-  color: #8a8a8a;
-  font-size: 23rpx;
-  line-height: 30rpx;
+  margin-top: 10rpx;
+  color: #666666;
+  font-size: 26rpx;
+  line-height: 36rpx;
 }
 
 .bookButton {
   width: 280rpx;
-  height: 88rpx;
-  border-radius: 44rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
   background: #e0115f;
   display: flex;
   align-items: center;
@@ -461,6 +462,6 @@
 
 .bookButtonText {
   color: #ffffff;
-  font-size: 30rpx;
+  font-size: 32rpx;
   font-weight: 600;
 }

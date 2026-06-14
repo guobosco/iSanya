@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.ui.navigation.Screen
 
@@ -28,8 +28,8 @@ import com.example.Lulu.ui.navigation.Screen
 fun TagDetailScreen(navController: NavController, tagName: String?) {
     if (tagName == null) return
 
-    val allContacts by MockDataStore.contacts.collectAsState()
-    val currentUser = MockDataStore.currentUser.collectAsState().value
+    val allContacts by AppDataStore.contacts.collectAsState()
+    val currentUser = AppDataStore.currentUser.collectAsState().value
     val tagContacts = allContacts.filter { it.tags.contains(tagName) && it.id != currentUser.id }
     
     var showAddDialog by remember { mutableStateOf(false) }
@@ -163,10 +163,10 @@ fun TagDetailScreen(navController: NavController, tagName: String?) {
                             
                             if (shouldHaveTag && !hasTag) {
                                 val updatedUser = user.copy(tags = user.tags + tagName)
-                                MockDataStore.updateServiceHost(updatedUser)
+                                AppDataStore.updateServiceHost(updatedUser)
                             } else if (!shouldHaveTag && hasTag) {
                                 val updatedUser = user.copy(tags = user.tags - tagName)
-                                MockDataStore.updateServiceHost(updatedUser)
+                                AppDataStore.updateServiceHost(updatedUser)
                             }
                         }
                         searchQuery = ""

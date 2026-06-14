@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.ui.navigation.Screen
 import com.google.zxing.BarcodeFormat
@@ -73,7 +73,7 @@ import com.example.Lulu.ui.components.EditDialog
 fun MyQrCodeScreen(navController: NavController) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val user by MockDataStore.currentUser.collectAsState()
+    val user by AppDataStore.currentUser.collectAsState()
     
     val serviceHostTerm = stringResource(R.string.service_host_term)
 
@@ -161,18 +161,18 @@ fun MyQrCodeScreen(navController: NavController) {
             coroutineScope.launch {
                 isAvatarSaving = true
                 try {
-                    val repository = MockDataStore.getRepository()
+                    val repository = AppDataStore.getRepository()
                     if (repository != null) {
                         Toast.makeText(context, "正在上传头像...", Toast.LENGTH_SHORT).show()
                         val serverUrl = com.example.Lulu.util.AvatarUploadUtil.processAndUploadAvatar(context, croppedUri, repository)
                         if (serverUrl != null) {
-                            val updatedUser = MockDataStore.currentUser.value.copy(
+                            val updatedUser = AppDataStore.currentUser.value.copy(
                                 photoUrl = serverUrl,
                                 updatedAt = System.currentTimeMillis()
                             )
                             val result = repository.syncCurrentUserProfile(updatedUser)
                             result.onSuccess { savedUser ->
-                                MockDataStore.replaceCurrentUser(savedUser)
+                                AppDataStore.replaceCurrentUser(savedUser)
                                 Toast.makeText(context, "头像已更新", Toast.LENGTH_SHORT).show()
                             }.onFailure { error ->
                                 Toast.makeText(context, error.message ?: "头像保存失败，请重试", Toast.LENGTH_SHORT).show()
@@ -413,7 +413,7 @@ fun MyQrCodeScreen(navController: NavController) {
                 onDismiss = { showEditDialog = false },
                 onConfirm = { newId ->
                     val updatedUser = user.copy(peiPeiId = newId)
-                    MockDataStore.updateCurrentUser(updatedUser)
+                    AppDataStore.updateCurrentUser(updatedUser)
                     Toast.makeText(context, "i三亚 ID已更新", Toast.LENGTH_SHORT).show()
                     showEditDialog = false
                 }

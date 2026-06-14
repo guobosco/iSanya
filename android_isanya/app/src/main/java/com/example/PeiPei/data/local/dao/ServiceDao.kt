@@ -30,48 +30,6 @@ interface ServiceDao {
     )
     fun getMyCreatedServicesHubFlow(userId: String): Flow<List<Service>>
 
-    /** 本人创建的服务 + 注入到首页的假数据（id 前缀 seed-home-{当前用户}-） */
-    @Query(
-        """
-        SELECT * FROM services WHERE isDeleted = 0 AND isDraft = 0 AND (
-            creatorId = :userId OR id LIKE :homeSeedIdPattern
-        ) ORDER BY updatedAt DESC, createdAt DESC
-        """
-    )
-    fun getHomeFeedServicesFlow(userId: String, homeSeedIdPattern: String): Flow<List<Service>>
-
-    @Query(
-        """
-        SELECT * FROM services WHERE isDeleted = 0 AND isDraft = 0 AND (
-            creatorId = :userId OR id LIKE :homeSeedIdPattern
-        ) ORDER BY updatedAt DESC, createdAt DESC
-        """
-    )
-    suspend fun getHomeFeedServices(userId: String, homeSeedIdPattern: String): List<Service>
-
-    /** 仅注入到当前用户首页的假数据（id 形如 `seed-home-{viewerId}-%`），与广场缓存分开展示 */
-    @Query(
-        """
-        SELECT * FROM services WHERE isDeleted = 0 AND isDraft = 0 AND id LIKE :homeSeedIdPattern
-        ORDER BY updatedAt DESC, createdAt DESC
-        """
-    )
-    fun getHomeSeedInjectedServicesFlow(homeSeedIdPattern: String): Flow<List<Service>>
-
-    @Query(
-        """
-        SELECT * FROM services WHERE isDeleted = 0 AND isDraft = 0 AND id LIKE :homeSeedIdPattern
-        ORDER BY updatedAt DESC, createdAt DESC
-        """
-    )
-    suspend fun getHomeSeedInjectedServices(homeSeedIdPattern: String): List<Service>
-
-    @Query("DELETE FROM services WHERE id LIKE :homeSeedIdPattern")
-    suspend fun deleteServicesByHomeSeedPattern(homeSeedIdPattern: String)
-
-    @Query("SELECT COUNT(*) FROM services WHERE isDeleted = 0 AND id LIKE :idLikePattern")
-    suspend fun countNonDeletedServicesByIdLike(idLikePattern: String): Int
-
     @Query("SELECT * FROM services WHERE id = :serviceId LIMIT 1")
     fun getServiceById(serviceId: String): Flow<Service?>
 

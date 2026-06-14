@@ -92,7 +92,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.User
@@ -132,7 +132,7 @@ fun ServiceHostProfileScreen(
     val userState by viewModel.user.collectAsState()
     val publishedServices by viewModel.publishedServices.collectAsState()
     val loadError by viewModel.loadError.collectAsState()
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
     val isSelfProfile = !userId.isNullOrEmpty() && userId == currentUser.id
 
     if (userState == null) {
@@ -311,7 +311,7 @@ private fun ServiceHostProfileChatBottomBar(
         OutlinedButton(
             onClick = {
                 scope.launch {
-                    val repo = MockDataStore.getRepository()
+                    val repo = AppDataStore.getRepository()
                     if (repo == null) {
                         Toast.makeText(context, "聊天服务未就绪，请稍后重试", Toast.LENGTH_SHORT).show()
                         return@launch

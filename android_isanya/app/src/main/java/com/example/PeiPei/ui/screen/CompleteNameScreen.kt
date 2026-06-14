@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 import kotlinx.coroutines.launch
 
@@ -39,13 +39,13 @@ fun CompleteNameScreen(navController: NavController) {
                     TextButton(onClick = {
                         coroutineScope.launch {
                             isSaving = true
-                            val user = MockDataStore.currentUser.value
+                            val user = AppDataStore.currentUser.value
                             val defaultName = if (user.peiPeiId.isNotEmpty()) user.peiPeiId else "i三亚_${user.phoneNumber}"
                             val updatedUser = user.copy(name = defaultName, updatedAt = System.currentTimeMillis())
-                            val repository = MockDataStore.getRepository()
+                            val repository = AppDataStore.getRepository()
                             val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)
                             result.onSuccess { savedUser ->
-                                MockDataStore.replaceCurrentUser(savedUser)
+                                AppDataStore.replaceCurrentUser(savedUser)
                                 navController.navigate(Screen.CompleteProfile.route)
                             }.onFailure { error ->
                                 Toast.makeText(context, error.message ?: "昵称保存失败，请重试", Toast.LENGTH_SHORT).show()
@@ -97,12 +97,12 @@ fun CompleteNameScreen(navController: NavController) {
                     if (name.isNotBlank()) {
                         coroutineScope.launch {
                             isSaving = true
-                            val user = MockDataStore.currentUser.value
+                            val user = AppDataStore.currentUser.value
                             val updatedUser = user.copy(name = name, updatedAt = System.currentTimeMillis())
-                            val repository = MockDataStore.getRepository()
+                            val repository = AppDataStore.getRepository()
                             val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)
                             result.onSuccess { savedUser ->
-                                MockDataStore.replaceCurrentUser(savedUser)
+                                AppDataStore.replaceCurrentUser(savedUser)
                                 Toast.makeText(context, "昵称设置成功", Toast.LENGTH_SHORT).show()
                                 navController.navigate(Screen.CompleteProfile.route)
                             }.onFailure { error ->

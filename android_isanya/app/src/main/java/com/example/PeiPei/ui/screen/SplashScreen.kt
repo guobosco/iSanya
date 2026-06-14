@@ -21,7 +21,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.navigation.NavController
 import com.example.Lulu.R
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
@@ -34,7 +34,7 @@ fun SplashScreen(navController: NavController, nextRoute: String) {
     val currentNextRoute = rememberUpdatedState(nextRoute)
     val view = LocalView.current
     val splashBackground = MaterialTheme.colorScheme.surface
-    val repository = MockDataStore.getRepository()
+    val repository = AppDataStore.getRepository()
 
     // 启动时优先预加载首页首屏关键数据，减少进入首页后空白等待。
     LaunchedEffect(Unit) {
@@ -54,7 +54,7 @@ fun SplashScreen(navController: NavController, nextRoute: String) {
             if (userId.isNotBlank()) {
                 repository?.refreshHomeCriticalData(userId)
             }
-            MockDataStore.reloadServicesFromDatabase()
+            AppDataStore.reloadServicesFromDatabase()
         }
 
         val spent = System.currentTimeMillis() - startedAt

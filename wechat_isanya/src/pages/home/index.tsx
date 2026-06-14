@@ -1,17 +1,19 @@
-import React, { useMemo, useState } from 'react';
-import Taro from '@tarojs/taro';
-import { ScrollView, Text, View } from '@tarojs/components';
+import React, { useMemo, useState, useEffect } from 'react';
+import Taro, { useLoad, usePullDownRefresh } from '@tarojs/taro';
+import { ScrollView, Text, View, Image } from '@tarojs/components';
 import styles from './index.module.scss';
 
 type HomeTab = 'service' | 'experience';
-type ServiceCard = {
+
+type ServiceData = {
   id: string;
   title: string;
-  info: string;
-  price: string;
-  coverClass: string;
-  favorite: boolean;
+  description: string;
+  cover_image_url: string;
+  location: string;
+  price_text: string;
   category: string;
+  service_time: number;
 };
 
 type ExperienceItem = {
@@ -28,17 +30,6 @@ type ExperienceSection = {
   title: string;
   items: ExperienceItem[];
 };
-
-const categories = ['全部', '陪游', '旅拍', '按摩', '私厨', '租车', '健身', '派对'];
-
-const allServices: ServiceCard[] = [
-  { id: 'svc-01', title: '海棠湾一日陪游', info: '陪游 · 三亚 · 中文/英语', price: '¥199起', coverClass: styles.coverA, favorite: true, category: '陪游' },
-  { id: 'svc-02', title: '蜈支洲包车出海线', info: '租车 · 海棠区 · 半日', price: '¥388起', coverClass: styles.coverB, favorite: false, category: '租车' },
-  { id: 'svc-03', title: '酒店上门按摩', info: '按摩 · 三亚湾 · 60分钟', price: '¥168起', coverClass: styles.coverC, favorite: false, category: '按摩' },
-  { id: 'svc-04', title: '琼味私厨到店体验', info: '私厨 · 吉阳区 · 4-6人', price: '¥258起', coverClass: styles.coverD, favorite: true, category: '私厨' },
-  { id: 'svc-05', title: '日落跟拍轻旅拍', info: '旅拍 · 椰梦长廊 · 90分钟', price: '¥299起', coverClass: styles.coverE, favorite: false, category: '旅拍' },
-  { id: 'svc-06', title: '海边健身私教陪练', info: '健身 · 小东海 · 1小时', price: '¥220起', coverClass: styles.coverF, favorite: false, category: '健身' },
-];
 
 const experienceSections: ExperienceSection[] = [
   {
@@ -70,9 +61,57 @@ const experienceSections: ExperienceSection[] = [
   },
 ];
 
+declare var process: any;
+
+const resolveMediaUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const baseStr = process.env.TARO_APP_API_BASE_URL || '';
+  const base = baseStr.replace(/^['"](.*)['"]$/, '$1');
+  return `${base.replace(/\/$/, '')}/${url.replace(/^\//, '')}`;
+};
+
 function HomePage() {
   const [selectedTab, setSelectedTab] = useState<HomeTab>('service');
   const [selectedCategory, setSelectedCategory] = useState('全部');
+  const [services, setServices] = useState<ServiceData[]>([]);
+
+  const fetchServices = (isRefresh = false) => {
+    Taro.request({
+      url: `${process.env.TARO_APP_API_BASE_URL}/services/discovery`,
+      method: 'GET',
+      success: (res: any) => {
+        if (res.statusCode === 200) {
+          setServices(res.data);
+        } else {
+          Taro.showToast({ title: '加载失败', icon: 'none' });
+        }
+      },
+      fail: () => {
+        Taro.showToast({ title: '网络错误', icon: 'none' });
+      },
+      complete: () => {
+        if (isRefresh) {
+          setTimeout(() => {
+            Taro.stopPullDownRefresh();
+          }, 800);
+        }
+      }
+    });
+  };
+
+  useLoad(() => {
+    fetchServices();
+  });
+
+  usePullDownRefresh(() => {
+    fetchServices(true);
+  });
+
+  const categories = useMemo(() => {
+    const cats = new Set(services.map((s: ServiceData) => s.category).filter(Boolean));
+    return ['全部', ...Array.from(cats)];
+  }, [services]);
 
   const tabs = useMemo(
     () => [
@@ -84,13 +123,13 @@ function HomePage() {
 
   const serviceColumns = useMemo(() => {
     const filtered = selectedCategory === '全部'
-      ? allServices
-      : allServices.filter((item: ServiceCard) => item.category === selectedCategory);
+      ? services
+      : services.filter((item: ServiceData) => item.category === selectedCategory);
     return {
-      left: filtered.filter((_, index) => index % 2 === 0),
-      right: filtered.filter((_, index) => index % 2 === 1),
+      left: filtered.filter((_: any, index: number) => index % 2 === 0),
+      right: filtered.filter((_: any, index: number) => index % 2 === 1),
     };
-  }, [selectedCategory]);
+  }, [services, selectedCategory]);
 
   return (
     <View className={styles.page}>
@@ -118,7 +157,7 @@ function HomePage() {
         <>
           <ScrollView className={styles.filterScroll} scrollX enhanced showScrollbar={false}>
             <View className={styles.filterRow}>
-              {categories.map((item) => (
+              {categories.map((item: string) => (
                 <View
                   key={item}
                   className={item === selectedCategory ? styles.filterChipActive : styles.filterChip}
@@ -132,42 +171,40 @@ function HomePage() {
 
           <View className={styles.waterfall}>
             <View className={styles.waterfallColumn}>
-              {serviceColumns.left.map((item: ServiceCard) => (
+              {serviceColumns.left.map((item: ServiceData) => (
                 <View
                   key={item.id}
                   className={styles.feedCard}
                   onClick={() => Taro.navigateTo({ url: `/pages/service-detail/index?id=${item.id}` })}
                 >
-                  <View className={`${styles.feedCover} ${item.coverClass}`}>
-                    <View className={`${styles.coverFavorite} ${item.favorite ? styles.coverFavoriteActive : ''}`}>
-                      {item.favorite ? '♥' : '♡'}
-                    </View>
+                  <View className={styles.feedCover}>
+                    {item.cover_image_url && <Image src={resolveMediaUrl(item.cover_image_url)} mode="aspectFill" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />}
+                    <View className={styles.coverFavorite}>♡</View>
                   </View>
                   <View className={styles.feedBody}>
                     <Text className={styles.feedTitle}>{item.title}</Text>
-                    <Text className={styles.feedMeta}>{item.info}</Text>
-                    <Text className={styles.feedPrice}>{item.price}</Text>
+                    <Text className={styles.feedMeta}>{item.category} · {item.location}</Text>
+                    <Text className={styles.feedPrice}>{item.price_text}</Text>
                   </View>
                 </View>
               ))}
             </View>
 
             <View className={styles.waterfallColumn}>
-              {serviceColumns.right.map((item: ServiceCard) => (
+              {serviceColumns.right.map((item: ServiceData) => (
                 <View
                   key={item.id}
                   className={styles.feedCard}
                   onClick={() => Taro.navigateTo({ url: `/pages/service-detail/index?id=${item.id}` })}
                 >
-                  <View className={`${styles.feedCover} ${item.coverClass}`}>
-                    <View className={`${styles.coverFavorite} ${item.favorite ? styles.coverFavoriteActive : ''}`}>
-                      {item.favorite ? '♥' : '♡'}
-                    </View>
+                  <View className={styles.feedCover}>
+                    {item.cover_image_url && <Image src={resolveMediaUrl(item.cover_image_url)} mode="aspectFill" style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }} />}
+                    <View className={styles.coverFavorite}>♡</View>
                   </View>
                   <View className={styles.feedBody}>
                     <Text className={styles.feedTitle}>{item.title}</Text>
-                    <Text className={styles.feedMeta}>{item.info}</Text>
-                    <Text className={styles.feedPrice}>{item.price}</Text>
+                    <Text className={styles.feedMeta}>{item.category} · {item.location}</Text>
+                    <Text className={styles.feedPrice}>{item.price_text}</Text>
                   </View>
                 </View>
               ))}

@@ -53,7 +53,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.Lulu.R
 import com.example.Lulu.ui.navigation.Screen
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.components.PrimaryGradientButton
@@ -130,7 +130,7 @@ fun CreateServiceScreen(
     // 尽管我们可能不再主要依赖 LocalSoftwareKeyboardController，但保留它作为一个 fallback
     val keyboardController = LocalSoftwareKeyboardController.current
     val view = LocalView.current
-    val currentUser by MockDataStore.currentUser.collectAsState()
+    val currentUser by AppDataStore.currentUser.collectAsState()
 
     // Theme adaptation (follow system)
     val isDarkTheme = isSystemInDarkTheme()
@@ -252,7 +252,7 @@ fun CreateServiceScreen(
     // 加载已有数据
     LaunchedEffect(serviceId, initialUserIds, openBookingOnLaunch) {
         if (navServiceId != null) {
-            val service = MockDataStore.getServiceById(navServiceId)
+            val service = AppDataStore.getServiceById(navServiceId)
             if (service != null) {
                 title = service.title
                 description = service.description.ifBlank { service.title }
@@ -278,7 +278,7 @@ fun CreateServiceScreen(
                 extraServiceDeclarations = service.serviceDeclarationsExtra
 
                 // 恢复参与者 (包含自己)
-                val participants = service.participantIds.mapNotNull { MockDataStore.getUserById(it) }
+                val participants = service.participantIds.mapNotNull { AppDataStore.getUserById(it) }
                 selectedParticipants = participants
 
                 if (openBookingOnLaunch) {
@@ -289,7 +289,7 @@ fun CreateServiceScreen(
         } else if (initialUserIds != null) {
             // 处理预选联系人
             val ids = initialUserIds.split(",")
-            val users = ids.mapNotNull { MockDataStore.getUserById(it) }
+            val users = ids.mapNotNull { AppDataStore.getUserById(it) }
             if (users.any { it.id == currentUser.id }) {
                 selectedParticipants = users
             } else {
@@ -315,7 +315,7 @@ fun CreateServiceScreen(
         val bookingJson = BookingTimeRangesCodec.encode(bookingTimeSlots)
 
         if (isEditMode && effectiveServiceId != null) {
-             MockDataStore.updateService(
+             AppDataStore.updateService(
                 id = effectiveServiceId,
                 title = publishTitle,
                 note = publishContent,
@@ -352,7 +352,7 @@ fun CreateServiceScreen(
              navController.popBackStack()
         } else {
             // 创建服务
-            val newService = MockDataStore.addService(
+            val newService = AppDataStore.addService(
                 title = publishTitle,
                 note = publishContent,
                 participantIds = finalParticipantIds,
@@ -408,7 +408,7 @@ fun CreateServiceScreen(
         val id = effectiveServiceId
         try {
             if (id != null) {
-                MockDataStore.updateService(
+                AppDataStore.updateService(
                     id = id,
                     title = publishTitle,
                     note = publishContent.ifBlank { publishTitle },
@@ -432,7 +432,7 @@ fun CreateServiceScreen(
                     isDraft = true,
                 )
             } else {
-                val newService = MockDataStore.addService(
+                val newService = AppDataStore.addService(
                     title = publishTitle,
                     note = publishContent.ifBlank { publishTitle },
                     participantIds = finalParticipantIds,

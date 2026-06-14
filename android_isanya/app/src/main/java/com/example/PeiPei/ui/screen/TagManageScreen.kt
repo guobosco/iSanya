@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.ui.navigation.Screen
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -36,9 +36,9 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TagManageScreen(navController: NavController) {
-    val tags by MockDataStore.tags.collectAsState()
-    val contacts by MockDataStore.contacts.collectAsState()
-    val currentUser = MockDataStore.currentUser.collectAsState().value
+    val tags by AppDataStore.tags.collectAsState()
+    val contacts by AppDataStore.contacts.collectAsState()
+    val currentUser = AppDataStore.currentUser.collectAsState().value
     
     var showDialog by remember { mutableStateOf(false) }
     var isEditing by remember { mutableStateOf(false) }
@@ -94,7 +94,7 @@ fun TagManageScreen(navController: NavController) {
                         showDialog = true
                     },
                     onDelete = {
-                        MockDataStore.deleteTag(tag)
+                        AppDataStore.deleteTag(tag)
                     }
                 )
             }
@@ -125,9 +125,9 @@ fun TagManageScreen(navController: NavController) {
                         onClick = {
                             if (currentTag.isNotBlank()) {
                                 if (isEditing) {
-                                    MockDataStore.updateTag(originalTag, currentTag)
+                                    AppDataStore.updateTag(originalTag, currentTag)
                                 } else {
-                                    MockDataStore.addTag(currentTag)
+                                    AppDataStore.addTag(currentTag)
                                     // Navigate to tag detail (service host selection) after creation
                                     navController.navigate(Screen.TagDetail.createRoute(currentTag))
                                 }

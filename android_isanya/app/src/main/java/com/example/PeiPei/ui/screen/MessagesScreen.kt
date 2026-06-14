@@ -68,7 +68,7 @@ import androidx.navigation.NavController
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.ChatConversation
 import com.example.Lulu.ui.components.CommonAvatar
 import com.example.Lulu.ui.components.FeiLingPullRefreshHintIndicator
@@ -88,9 +88,9 @@ fun MessagesScreen(navController: NavController) {
     val view = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val pageColor = Color.White
-    val repository = remember { MockDataStore.getRepository() }
-    val currentUser by MockDataStore.currentUser.collectAsState()
-    val contacts by MockDataStore.contacts.collectAsState()
+    val repository = remember { AppDataStore.getRepository() }
+    val currentUser by AppDataStore.currentUser.collectAsState()
+    val contacts by AppDataStore.contacts.collectAsState()
     val conversations by (
         repository?.allConversations?.collectAsState(initial = emptyList())
             ?: remember { mutableStateOf(emptyList()) }

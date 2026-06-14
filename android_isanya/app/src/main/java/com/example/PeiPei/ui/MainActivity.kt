@@ -16,7 +16,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.Lulu.R
 import com.example.Lulu.service.NotificationService
-import com.example.Lulu.data.local.MockDataStore
+import com.example.Lulu.data.local.AppDataStore
 import kotlinx.coroutines.launch
 
 /**

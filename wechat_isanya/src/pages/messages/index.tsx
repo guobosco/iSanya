@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import Taro from '@tarojs/taro';
+import Taro, { usePullDownRefresh } from '@tarojs/taro';
 import { ScrollView, Text, View } from '@tarojs/components';
 import styles from './index.module.scss';
 
@@ -16,7 +16,7 @@ type MessageItem = {
 const tabs = ['全部', '问询我的', '我问询的', '用户支持', '已归档'];
 
 const allMessages: MessageItem[] = [
-  { id: 'msg-01', title: '阿舟', snippet: '周六下午的陪游档期可以给你预留。', time: '12:30', type: '问询我的', starred: true, archived: false },
+  { id: 'msg-01', title: '阿舟', snippet: '周六下午的地陪档期可以给你预留。', time: '12:30', type: '问询我的', starred: true, archived: false },
   { id: 'msg-02', title: '林晚', snippet: '日落旅拍建议你穿浅色衣服，出片会更干净。', time: '昨天', type: '我问询的', starred: false, archived: false },
   { id: 'msg-03', title: '平台客服', snippet: '你提交的资料已收到，我们会尽快审核。', time: '周一', type: '用户支持', starred: false, archived: false },
   { id: 'msg-04', title: '小满', snippet: '心愿单我看到了，可以帮你重新排个路线。', time: '06/06', type: '问询我的', starred: false, archived: true },
@@ -33,6 +33,13 @@ function MessagesPage() {
     }
     return allMessages.filter((item: MessageItem) => !item.archived && item.type === selectedTab);
   }, [selectedTab]);
+
+  usePullDownRefresh(() => {
+    // Simulate refresh delay since it's mock data right now
+    setTimeout(() => {
+      Taro.stopPullDownRefresh();
+    }, 1000);
+  });
 
   return (
     <View className={styles.page}>
