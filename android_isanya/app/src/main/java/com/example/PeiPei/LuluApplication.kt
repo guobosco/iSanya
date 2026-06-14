@@ -93,15 +93,6 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
         // Initialize AppDataStore proxy
         AppDataStore.initialize(repository)
 
-        // 无 token 时写入 demo 用户；首页瀑布流仅展示 Room 内真实同步数据（见 ServiceDao / fetchAndSyncDiscoveryServices）
-        applicationScope.launch(startupExceptionHandler) {
-            runCatching {
-                ensureDefaultLoggedInUser(repository)
-            }.onFailure { throwable ->
-                android.util.Log.e("LuluApplication", "Startup initialization failed", throwable)
-            }
-        }
-
         applicationScope.launch(startupExceptionHandler) {
             repository.newChatMessageFlow.collect { message: com.example.Lulu.data.model.ChatMessage ->
                 runCatching {
@@ -215,25 +206,4 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
 
     override fun onActivityDestroyed(activity: Activity) {}
 
-    private suspend fun ensureDefaultLoggedInUser(repository: LuluRepository) {
-        if (repository.currentUserId.isNotEmpty()) {
-            return
-        }
-
-        val defaultUser = User(
-            id = "local_demo_user",
-            name = "i三亚用户",
-            peiPeiId = "pp_demo",
-            phoneNumber = "13800000000",
-            isPhoneVerified = true,
-            isProfileCompleted = true,
-            gender = "女",
-            region = "杭州",
-            createdAt = System.currentTimeMillis(),
-            updatedAt = System.currentTimeMillis()
-        )
-
-        repository.addUser(defaultUser)
-        AppDataStore.replaceCurrentUser(defaultUser)
-    }
 }

@@ -78,7 +78,7 @@ function ServiceDetailPage() {
             verified: true,
             favorite: false,
             tags: data.category ? [data.category] : [],
-            images: images.length ? images : ['https://via.placeholder.com/600x800?text=No+Image'],
+            images,
             description: data.description ? data.description.split('\n') : ['暂无介绍'],
             notes: [
               '请提前确认服务时间。',
@@ -112,9 +112,10 @@ function ServiceDetailPage() {
   }
 
   const selectedPlan = service.plans[selectedPlanIndex] ?? service.plans[0];
-  const currentPreviewImage = service.images[currentImage] ?? service.images[0];
+  const currentPreviewImage = service.images[currentImage] ?? service.images[0] ?? '';
 
   const handlePreviewImages = (index: number) => {
+    if (!service.images.length) return;
     Taro.previewImage({
       current: service.images[index] ?? currentPreviewImage,
       urls: service.images,
@@ -131,13 +132,23 @@ function ServiceDetailPage() {
           indicatorDots={false}
           onChange={(event) => setCurrentImage(event.detail.current)}
         >
-          {service.images.map((image, index) => (
-            <SwiperItem key={image}>
-              <View className={styles.heroSlide} onClick={() => handlePreviewImages(index)}>
-                <Image className={styles.heroImage} src={image} mode="aspectFill" />
+          {service.images.length ? (
+            service.images.map((image, index) => (
+              <SwiperItem key={image}>
+                <View className={styles.heroSlide} onClick={() => handlePreviewImages(index)}>
+                  <Image className={styles.heroImage} src={image} mode="aspectFill" />
+                </View>
+              </SwiperItem>
+            ))
+          ) : (
+            <SwiperItem key='empty-image'>
+              <View className={styles.heroSlide}>
+                <View style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8d8d8d', background: '#f5f5f5' }}>
+                  暂无真实图片
+                </View>
               </View>
             </SwiperItem>
-          ))}
+          )}
         </Swiper>
         <View className={styles.heroMask} />
         <View className={styles.heroActions}>
@@ -159,7 +170,7 @@ function ServiceDetailPage() {
             </View>
           </View>
         </View>
-        <View className={styles.heroPager}>{currentImage + 1} / {service.images.length}</View>
+        <View className={styles.heroPager}>{service.images.length ? `${currentImage + 1} / ${service.images.length}` : '0 / 0'}</View>
         <View className={styles.heroDots}>
           {service.images.map((image, index) => (
             <View key={image} className={`${styles.heroDot} ${index === currentImage ? styles.heroDotActive : ''}`} />

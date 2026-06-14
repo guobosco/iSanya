@@ -1,5 +1,4 @@
 import React from 'react';
-import Taro from '@tarojs/taro';
 import { Text, View } from '@tarojs/components';
 import styles from './index.module.scss';
 
@@ -24,13 +23,11 @@ const groups: MineCell[][] = [
 ];
 
 function MinePage() {
-  const phone = Taro.getStorageSync<string>('isanya_demo_phone') || '未登录';
-
   return (
     <View className={styles.page}>
       <View className={styles.header}>
         <View className={styles.headerActions}>
-          <View className={styles.actionButton} onClick={() => Taro.showToast({ title: '设置待接入', icon: 'none' })}>
+          <View className={styles.actionButton}>
             设
           </View>
         </View>
@@ -41,23 +38,23 @@ function MinePage() {
         <View className={styles.profileMain}>
           <View className={styles.profileLeft}>
             <View className={styles.avatar}>P</View>
-            <Text className={styles.profileName}>PeiPei Demo</Text>
-            <Text className={styles.profileRegion}>当前账号：{phone}</Text>
+            <Text className={styles.profileName}>未登录</Text>
+            <Text className={styles.profileRegion}>本地演示账号已移除</Text>
           </View>
           <View className={styles.profileRight}>
             <View className={styles.statBlock}>
               <Text className={styles.statLabel}>i三亚 ID</Text>
-              <Text className={styles.statValue}>ISY-1024</Text>
+              <Text className={styles.statValue}>--</Text>
             </View>
             <View className={styles.divider} />
             <View className={styles.statBlock}>
               <Text className={styles.statLabel}>性别</Text>
-              <Text className={styles.statValue}>女</Text>
+              <Text className={styles.statValue}>--</Text>
             </View>
             <View className={styles.divider} />
             <View className={styles.statBlock}>
               <Text className={styles.statLabel}>加入 i三亚</Text>
-              <Text className={styles.statValue}>2年</Text>
+              <Text className={styles.statValue}>--</Text>
             </View>
           </View>
         </View>
@@ -70,7 +67,6 @@ function MinePage() {
             <View
               key={item.title}
               className={styles.cellItem}
-              onClick={() => Taro.showToast({ title: `${item.title}待接入`, icon: 'none' })}
             >
               <View className={styles.cellLeft}>
                 <View className={styles.cellIcon}>{item.icon}</View>
@@ -85,11 +81,11 @@ function MinePage() {
         </View>
       ))}
 
-      <View className={styles.publishBar} onClick={() => Taro.navigateTo({ url: '/pages/publish/index' })}>
+      <View className={styles.publishBar}>
         <View className={styles.publishIcon}>发</View>
         <View className={styles.publishText}>
           <Text className={styles.publishTitle}>发布「服务」或「体验」</Text>
-          <Text className={styles.publishDesc}>填写表单信息即可上架接单</Text>
+          <Text className={styles.publishDesc}>登录与发布能力接入真实接口后开放</Text>
         </View>
       </View>
     </View>

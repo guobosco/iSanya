@@ -4,17 +4,16 @@ import { Button, Input, Text, View } from '@tarojs/components';
 import styles from './index.module.scss';
 
 function LoginPage() {
-  const [phone, setPhone] = useState('13800000001');
-  const [password, setPassword] = useState('123456');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    Taro.setStorageSync('isanya_demo_phone', phone);
     Taro.showToast({
-      title: '已写入本地演示账号',
-      icon: 'success',
+      title: '真实登录待接入',
+      icon: 'none',
     });
+    void phone;
     void password;
-    Taro.switchTab({ url: '/pages/mine/index' });
   };
 
   return (
@@ -22,7 +21,7 @@ function LoginPage() {
       <View className={styles.card}>
         <Text className={styles.title}>登录 iSanya</Text>
         <Text className={styles.desc}>
-          当前先用本地演示态打通流程，下一步可直接替换为 /auth/token + /auth/me。
+          本地演示账号已移除；后续请直接接入真实 `/auth/token` 与用户信息接口。
         </Text>
         <Input
           className={styles.input}
@@ -39,7 +38,7 @@ function LoginPage() {
           onInput={(event) => setPassword(event.detail.value)}
         />
         <Button className={styles.button} onClick={handleLogin}>
-          登录并进入我的
+          真实登录待接入
         </Button>
       </View>
     </View>
