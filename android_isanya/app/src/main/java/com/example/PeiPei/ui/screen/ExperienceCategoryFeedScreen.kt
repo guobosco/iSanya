@@ -169,7 +169,7 @@ private fun ExperienceFeedListRow(
             .background(ExperienceFeedPageWhite)
             .clickable(onClick = onOpenDetail)
             .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.Top,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
@@ -206,7 +206,9 @@ private fun ExperienceFeedListRow(
         Column(
             modifier = Modifier
                 .weight(1f)
+                .height(thumbSize)
                 .padding(start = 12.dp),
+            verticalArrangement = Arrangement.Center,
         ) {
             Text(
                 text = item.title,
@@ -229,7 +231,7 @@ private fun ExperienceFeedListRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = if (item.priceFromYuan > 0) {
-                        "${stringResource(R.string.experience_per_guest_prefix)} ${stringResource(R.string.experience_yuan_symbol)}${item.priceFromYuan}${stringResource(R.string.experience_price_from_suffix)}"
+                        "${item.priceFromYuan}元/位起"
                     } else {
                         "价格待定"
                     },
