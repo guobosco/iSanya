@@ -108,7 +108,7 @@ fun MainScreen(
 
     val items = listOf(
         BottomNavItem(
-            label = "i三亚",
+            label = "爱野",
             normalIconRes = R.drawable.tab_home_normal,
             selectedIconRes = R.drawable.tab_home_selected
         ),

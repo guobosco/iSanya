@@ -294,7 +294,7 @@ fun LoginScreen(navController: NavController, initialPhone: String? = null) {
                     onDismissRequest = { showAgreementDialog = false },
                     title = { Text("服务协议和隐私政策", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                     text = { 
-                        Text("请您阅读并同意《服务协议》、《隐私政策》和《i三亚账号服务须知》，以便我们为您提供完整的服务。", lineHeight = 20.sp) 
+                        Text("请您阅读并同意《服务协议》、《隐私政策》和《爱野账号服务须知》，以便我们为您提供完整的服务。", lineHeight = 20.sp) 
                     },
                     confirmButton = {
                         TextButton(

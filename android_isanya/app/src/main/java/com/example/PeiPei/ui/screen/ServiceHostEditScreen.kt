@@ -150,7 +150,7 @@ fun ServiceHostEditScreen(navController: NavController, userId: String?, focusFi
             OutlinedTextField(
                 value = user!!.peiPeiId,
                 onValueChange = { },
-                label = { Text("i三亚 ID") },
+                label = { Text("爱野 ID") },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = false,
                 colors = OutlinedTextFieldDefaults.colors(

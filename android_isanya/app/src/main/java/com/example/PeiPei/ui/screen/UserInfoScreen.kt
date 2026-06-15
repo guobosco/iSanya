@@ -449,7 +449,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         MyProfileStatRow(
-                            label = "i三亚 ID",
+                            label = "爱野 ID",
                             value = if (isLoggedIn) user.peiPeiId.ifEmpty { "未设置" } else "—",
                             valueColor = textPrimary,
                             labelColor = textSecondary
@@ -463,7 +463,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                         )
                         HorizontalDivider(thickness = 1.dp, color = statDivider)
                         MyProfileStatRow(
-                            label = "加入 i三亚",
+                            label = "加入 爱野",
                             value = if (isLoggedIn) platformYearsOnLulu(user.createdAt) else "—",
                             valueColor = textPrimary,
                             labelColor = textSecondary
@@ -924,4 +924,3 @@ fun AddressEditDialog(
         }
     }
 }
-

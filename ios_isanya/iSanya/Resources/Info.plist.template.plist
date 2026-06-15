@@ -4,6 +4,8 @@
 <dict>
 	<key>ISANYA_BASE_URL</key>
 	<string>$(ISANYA_BASE_URL)</string>
+	<key>ISANYA_ALLOW_INSECURE_HTTPS</key>
+	<string>$(ISANYA_ALLOW_INSECURE_HTTPS)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>

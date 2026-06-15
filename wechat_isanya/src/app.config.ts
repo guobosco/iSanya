@@ -12,7 +12,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#FFFFFF',
-    navigationBarTitleText: 'i三亚',
+    navigationBarTitleText: '爱野',
     navigationBarTextStyle: 'black',
     backgroundColor: '#F7F7F7',
   },
@@ -24,7 +24,7 @@ export default defineAppConfig({
     list: [
       {
         pagePath: 'pages/home/index',
-        text: 'i三亚',
+        text: '爱野',
         iconPath: 'assets/tabbar/tab_home_normal.png',
         selectedIconPath: 'assets/tabbar/tab_home_selected.png',
       },

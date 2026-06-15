@@ -6,15 +6,13 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalView
@@ -33,7 +31,6 @@ import android.app.Activity
 fun SplashScreen(navController: NavController, nextRoute: String) {
     val currentNextRoute = rememberUpdatedState(nextRoute)
     val view = LocalView.current
-    val splashBackground = MaterialTheme.colorScheme.surface
     val repository = AppDataStore.getRepository()
 
     // 启动时优先预加载首页首屏关键数据，减少进入首页后空白等待。
@@ -66,13 +63,13 @@ fun SplashScreen(navController: NavController, nextRoute: String) {
         }
     }
 
-    DisposableEffect(view, splashBackground) {
+    DisposableEffect(view) {
         val window = (view.context as Activity).window
         val previousStatusBarColor = window.statusBarColor
         val previousLightStatusBars = WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars
 
-        window.statusBarColor = splashBackground.toArgb()
-        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = splashBackground.luminance() > 0.5f
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
 
         onDispose {
             window.statusBarColor = previousStatusBarColor
@@ -83,15 +80,15 @@ fun SplashScreen(navController: NavController, nextRoute: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(splashBackground)
+            .background(Color(0xFFEB2C5F))
     ) {
         Image(
             painter = painterResource(id = R.drawable.launch),
             contentDescription = "启动画面",
             modifier = Modifier
                 .align(Alignment.Center)
-                .fillMaxWidth(0.68f),
-            contentScale = ContentScale.FillWidth
+                .fillMaxSize(),
+            contentScale = ContentScale.Fit
         )
     }
 }

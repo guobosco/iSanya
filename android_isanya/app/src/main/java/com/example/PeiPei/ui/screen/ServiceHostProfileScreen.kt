@@ -470,7 +470,7 @@ private fun ProfileHeroCard(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 MyProfileStatRow(
-                    label = "i三亚 ID",
+                    label = "爱野 ID",
                     value = user.peiPeiId.ifEmpty { "未设置" },
                     valueColor = textPrimary,
                     labelColor = textSecondary
@@ -484,7 +484,7 @@ private fun ProfileHeroCard(
                 )
                 HorizontalDivider(thickness = 1.dp, color = statDivider)
                 MyProfileStatRow(
-                    label = "加入 i三亚",
+                    label = "加入 爱野",
                     value = platformYearsOnLulu(user.createdAt),
                     valueColor = textPrimary,
                     labelColor = textSecondary

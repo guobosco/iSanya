@@ -19,7 +19,7 @@ function LoginPage() {
   return (
     <View className={styles.page}>
       <View className={styles.card}>
-        <Text className={styles.title}>登录 iSanya</Text>
+        <Text className={styles.title}>登录 爱野</Text>
         <Text className={styles.desc}>
           本地演示账号已移除；后续请直接接入真实 `/auth/token` 与用户信息接口。
         </Text>

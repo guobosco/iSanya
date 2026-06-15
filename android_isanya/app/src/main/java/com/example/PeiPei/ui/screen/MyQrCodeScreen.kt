@@ -307,7 +307,7 @@ fun MyQrCodeScreen(navController: NavController) {
                                 )
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "i三亚 ID: ${user.peiPeiId.ifEmpty { "未设置" }}",
+                                        text = "爱野 ID: ${user.peiPeiId.ifEmpty { "未设置" }}",
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -399,7 +399,7 @@ fun MyQrCodeScreen(navController: NavController) {
         // 修改对话框
         if (showEditDialog) {
             EditDialog(
-                title = "修改i三亚 ID",
+                title = "修改爱野 ID",
                 initialValue = editId,
                 maxLength = 20,
                 validator = { input ->
@@ -414,7 +414,7 @@ fun MyQrCodeScreen(navController: NavController) {
                 onConfirm = { newId ->
                     val updatedUser = user.copy(peiPeiId = newId)
                     AppDataStore.updateCurrentUser(updatedUser)
-                    Toast.makeText(context, "i三亚 ID已更新", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "爱野 ID已更新", Toast.LENGTH_SHORT).show()
                     showEditDialog = false
                 }
             )

@@ -40,7 +40,7 @@ fun CompleteNameScreen(navController: NavController) {
                         coroutineScope.launch {
                             isSaving = true
                             val user = AppDataStore.currentUser.value
-                            val defaultName = if (user.peiPeiId.isNotEmpty()) user.peiPeiId else "i三亚_${user.phoneNumber}"
+                            val defaultName = if (user.peiPeiId.isNotEmpty()) user.peiPeiId else "爱野_${user.phoneNumber}"
                             val updatedUser = user.copy(name = defaultName, updatedAt = System.currentTimeMillis())
                             val repository = AppDataStore.getRepository()
                             val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)

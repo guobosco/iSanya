@@ -43,7 +43,7 @@ function MinePage() {
           </View>
           <View className={styles.profileRight}>
             <View className={styles.statBlock}>
-              <Text className={styles.statLabel}>i三亚 ID</Text>
+              <Text className={styles.statLabel}>爱野 ID</Text>
               <Text className={styles.statValue}>--</Text>
             </View>
             <View className={styles.divider} />
@@ -53,7 +53,7 @@ function MinePage() {
             </View>
             <View className={styles.divider} />
             <View className={styles.statBlock}>
-              <Text className={styles.statLabel}>加入 i三亚</Text>
+              <Text className={styles.statLabel}>加入 爱野</Text>
               <Text className={styles.statValue}>--</Text>
             </View>
           </View>

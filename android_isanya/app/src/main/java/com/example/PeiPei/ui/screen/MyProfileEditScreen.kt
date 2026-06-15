@@ -424,13 +424,13 @@ private fun MyProfileEditContent(
                             )
                             Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f))
                             ProfileItem(
-                                label = "i三亚 ID",
+                                label = "爱野 ID",
                                 value = user.peiPeiId,
                                 showArrow = true,
                                 onClick = {
                                     val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                                     if (user.lastIdModificationYear == currentYear && user.idModificationCount >= 3) {
-                                        Toast.makeText(context, "i三亚 ID一年只能修改3次", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "爱野 ID一年只能修改3次", Toast.LENGTH_SHORT).show()
                                     } else {
                                         showIdDialog = true
                                     }
@@ -648,9 +648,9 @@ private fun MyProfileEditContent(
     if (showIdDialog) {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         ProfileTextEditBottomSheet(
-            title = "修改i三亚 ID",
-            subtitle = "i三亚 ID是你在社区中的唯一标识，一年最多可修改 3 次。",
-            fieldLabel = "i三亚 ID（6–20 位字母、数字或下划线）",
+            title = "修改爱野 ID",
+            subtitle = "爱野 ID是你在社区中的唯一标识，一年最多可修改 3 次。",
+            fieldLabel = "爱野 ID（6–20 位字母、数字或下划线）",
             initialValue = user.peiPeiId,
             maxLength = 20,
             infoLinkText = "命名规则说明",
@@ -672,7 +672,7 @@ private fun MyProfileEditContent(
                     )
                 )
                 showIdDialog = false
-                Toast.makeText(context, "i三亚 ID修改成功", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "爱野 ID修改成功", Toast.LENGTH_SHORT).show()
             }
         )
     }

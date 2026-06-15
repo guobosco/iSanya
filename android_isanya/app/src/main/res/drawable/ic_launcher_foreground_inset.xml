@@ -2,8 +2,8 @@
 
 <!-- 文件说明：启动器图标前景 inset 包装，适配安全边距。 -->
 <inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:insetLeft="20dp"
-    android:insetTop="20dp"
-    android:insetRight="20dp"
-    android:insetBottom="20dp"
+    android:insetLeft="0dp"
+    android:insetTop="0dp"
+    android:insetRight="0dp"
+    android:insetBottom="0dp"
     android:drawable="@mipmap/ic_launcher_foreground" />

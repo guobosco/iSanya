@@ -1,6 +1,6 @@
 <!-- 文件说明：英文本地化字符串资源。 -->
 <resources>
-    <string name="app_name">i三亚</string>
+    <string name="app_name">爱野</string>
 
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
