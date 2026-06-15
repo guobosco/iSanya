@@ -146,6 +146,9 @@ class LuluApplication : Application(), Application.ActivityLifecycleCallbacks, I
         val okHttpImageClient = OkHttpClient.Builder()
             .cache(Cache(File(cacheDir, "okhttp_image_cache"), 50L * 1024 * 1024))
             .addNetworkInterceptor(avatarCacheInterceptor)
+            .apply {
+                RetrofitClient.applyDebugTlsOverrideIfNeeded(this)
+            }
             .build()
         return ImageLoader.Builder(this)
             .components {

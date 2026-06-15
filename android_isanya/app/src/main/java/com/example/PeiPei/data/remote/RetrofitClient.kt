@@ -43,6 +43,16 @@ object RetrofitClient {
         override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
     }
 
+    fun applyDebugTlsOverrideIfNeeded(builder: OkHttpClient.Builder): OkHttpClient.Builder {
+        if (!allowInsecureTlsForDebugIp) return builder
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(insecureTrustManager), SecureRandom())
+        }
+        builder.sslSocketFactory(sslContext.socketFactory, insecureTrustManager)
+        builder.hostnameVerifier { _, _ -> true }
+        return builder
+    }
+
     /**
      * 将后端返回的站点相对媒体路径（如 `static/avatars/…`）拼成可请求的绝对 URL。
      * 使用「API 的 scheme/host/port + 根路径 `/`」，避免 BASE_URL 带 `/api/…` 前缀时拼成 `/api/static/…` 导致 404。
@@ -147,14 +157,7 @@ object RetrofitClient {
         readTimeout(15, TimeUnit.SECONDS)
         writeTimeout(15, TimeUnit.SECONDS)
         callTimeout(20, TimeUnit.SECONDS)
-
-        if (allowInsecureTlsForDebugIp) {
-            val sslContext = SSLContext.getInstance("TLS").apply {
-                init(null, arrayOf(insecureTrustManager), SecureRandom())
-            }
-            sslSocketFactory(sslContext.socketFactory, insecureTrustManager)
-            hostnameVerifier { _, _ -> true }
-        }
+        applyDebugTlsOverrideIfNeeded(this)
     }.build()
 
     private val retrofit = Retrofit.Builder()

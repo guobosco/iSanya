@@ -95,7 +95,7 @@ private val HorizontalInset = 20.dp
 private enum class IncomeGranularity { MONTH, YEAR }
 
 private fun formatCny(amount: Double): String =
-    String.format(Locale.CHINA, "¥%.2f CNY", amount)
+    String.format(Locale.CHINA, "¥%.2f", amount)
 
 @Composable
 fun MyIncomeScreen(navController: NavController) {
@@ -383,7 +383,7 @@ private fun IncomeChartPlaceholder(modifier: Modifier = Modifier) {
         ) {
             grid.forEach { v ->
                 Text(
-                    text = "¥$v CNY",
+                    text = "¥$v",
                     fontSize = 11.sp,
                     color = Muted,
                     textAlign = TextAlign.End,
@@ -572,7 +572,7 @@ private fun OverviewSummaryCard(
             HorizontalDivider(Modifier.padding(vertical = 14.dp), color = Color(0x14000000))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("总计 (CNY)", color = TitleInk, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                Text("总计（人民币）", color = TitleInk, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                 Text(formatCny(0.0), color = TitleInk, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
 
@@ -592,7 +592,7 @@ private fun OverviewSummaryCard(
                     SubMoneyRow("预扣税", formatCny(0.0))
                     HorizontalDivider(Modifier.padding(vertical = 8.dp), color = Color(0x14000000))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("已支付合计 (CNY)", fontSize = 13.sp, color = Muted)
+                        Text("已支付合计（人民币）", fontSize = 13.sp, color = Muted)
                         Text(formatCny(0.0), fontSize = 13.sp, color = TitleInk, fontWeight = FontWeight.Medium)
                     }
                 }

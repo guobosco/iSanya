@@ -39,8 +39,6 @@ import com.example.Lulu.util.BookingTimeRangesCodec
 import com.google.gson.Gson
 import java.io.File
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
@@ -70,7 +68,6 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import retrofit2.HttpException
 
 class LuluRepository(
@@ -83,41 +80,6 @@ class LuluRepository(
     private val context: Context,
     private val apiService: ApiService? = null
 ) {
-    // #region debug-point A:android-home-empty-reporter
-    private fun reportAndroidHomeEmptyDebug(
-        hypothesisId: String,
-        location: String,
-        msg: String,
-        data: Map<String, Any?> = emptyMap()
-    ) {
-        runCatching {
-            Thread {
-                runCatching {
-                    val connection = (URL("http://192.168.43.160:7777/event").openConnection() as HttpURLConnection).apply {
-                        requestMethod = "POST"
-                        doOutput = true
-                        connectTimeout = 1500
-                        readTimeout = 1500
-                        setRequestProperty("Content-Type", "application/json")
-                    }
-                    val payload = JSONObject().apply {
-                        put("sessionId", "android-home-empty")
-                        put("runId", "pre-fix")
-                        put("hypothesisId", hypothesisId)
-                        put("location", location)
-                        put("msg", "[DEBUG] $msg")
-                        put("ts", System.currentTimeMillis())
-                        put("data", JSONObject(data.filterValues { it != null }))
-                    }
-                    connection.outputStream.use { it.write(payload.toString().toByteArray()) }
-                    connection.inputStream.close()
-                    connection.disconnect()
-                }
-            }.start()
-        }
-    }
-    // #endregion
-
     enum class FavoriteSyncError {
         NETWORK,
         SERVICE_NOT_FOUND,
@@ -768,34 +730,7 @@ class LuluRepository(
                     hasLocalDiscovery && lastSyncAt > 0L -> lastSyncAt
                     else -> null
                 }
-                // #region debug-point B:discovery-request-start
-                reportAndroidHomeEmptyDebug(
-                    hypothesisId = "B",
-                    location = "LuluRepository.fetchAndSyncDiscoveryServices:start",
-                    msg = "Discovery request started",
-                    data = mapOf(
-                        "apiBaseUrl" to BuildConfig.API_BASE_URL,
-                        "limit" to limit,
-                        "forceFullWindowFetch" to forceFullWindowFetch,
-                        "updatedAfter" to updatedAfter,
-                        "hasLocalDiscovery" to hasLocalDiscovery,
-                        "currentUserIdBlank" to userId.isBlank()
-                    )
-                )
-                // #endregion
                 val remote = api.getDiscoveryServices(skip = 0, limit = limit, updatedAfter = updatedAfter)
-                // #region debug-point C:discovery-response
-                reportAndroidHomeEmptyDebug(
-                    hypothesisId = "C",
-                    location = "LuluRepository.fetchAndSyncDiscoveryServices:response",
-                    msg = "Discovery response received",
-                    data = mapOf(
-                        "remoteCount" to remote.size,
-                        "firstId" to remote.firstOrNull()?.id,
-                        "firstCategory" to remote.firstOrNull()?.category
-                    )
-                )
-                // #endregion
                 if (BuildConfig.DEBUG) {
                     Log.d(
                         TAG,
@@ -806,17 +741,6 @@ class LuluRepository(
                 if (remote.isNotEmpty()) {
                     val batch = remote.map { it.copy(isSynced = true).withNormalizedCategory() }
                     serviceDao.insertServices(batch)
-                    // #region debug-point D:discovery-room-after-insert
-                    reportAndroidHomeEmptyDebug(
-                        hypothesisId = "D",
-                        location = "LuluRepository.fetchAndSyncDiscoveryServices:room",
-                        msg = "Discovery services inserted into Room",
-                        data = mapOf(
-                            "insertedCount" to batch.size,
-                            "squareDiscoveryCount" to serviceDao.getSquareDiscoveryServices().size
-                        )
-                    )
-                    // #endregion
                 } else if (updatedAfter == null) {
                     // 全量窗口仍为空：多为后端无数据、BASE_URL 不可达（此前已 IOException）或路径错误
                     Log.w(
@@ -835,17 +759,6 @@ class LuluRepository(
                     sharedPrefs.edit().putLong(key, System.currentTimeMillis()).apply()
                 }
             }.onFailure { e ->
-                // #region debug-point E:discovery-request-failed
-                reportAndroidHomeEmptyDebug(
-                    hypothesisId = "E",
-                    location = "LuluRepository.fetchAndSyncDiscoveryServices:failure",
-                    msg = "Discovery request failed",
-                    data = mapOf(
-                        "errorType" to e::class.java.simpleName,
-                        "errorMessage" to (e.message ?: "")
-                    )
-                )
-                // #endregion
                 Log.e(
                     TAG,
                     "fetchAndSyncDiscoveryServices failed (check network & API_BASE_URL=${BuildConfig.API_BASE_URL})",

@@ -95,15 +95,12 @@ import com.example.Lulu.ui.util.PullRefreshTokens
 import com.example.Lulu.ui.util.matchAdminLocation
 import com.example.Lulu.ui.util.resolveWishlistCategoryGroupName
 import com.example.Lulu.util.NetworkMonitor
-import java.net.HttpURLConnection
-import java.net.URL
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -115,41 +112,6 @@ private fun compactDisplayFromAdminMatch(m: MatchResult): String =
 private val HomeWishlistHeartColor = Color(0xFFFF5A5F)
 
 private val EthnicGroupSuffix = Regex("""[\u4E00-\u9FFF]{1,10}族$""")
-
-// #region debug-point A:android-home-empty-ui-reporter
-private fun reportAndroidHomeEmptyUiDebug(
-    hypothesisId: String,
-    location: String,
-    msg: String,
-    data: Map<String, Any?> = emptyMap()
-) {
-    runCatching {
-        Thread {
-            runCatching {
-                val connection = (URL("http://192.168.43.160:7777/event").openConnection() as HttpURLConnection).apply {
-                    requestMethod = "POST"
-                    doOutput = true
-                    connectTimeout = 1500
-                    readTimeout = 1500
-                    setRequestProperty("Content-Type", "application/json")
-                }
-                val payload = JSONObject().apply {
-                    put("sessionId", "android-home-empty")
-                    put("runId", "pre-fix")
-                    put("hypothesisId", hypothesisId)
-                    put("location", location)
-                    put("msg", "[DEBUG] $msg")
-                    put("ts", System.currentTimeMillis())
-                    put("data", JSONObject(data.filterValues { it != null }))
-                }
-                connection.outputStream.use { it.write(payload.toString().toByteArray()) }
-                connection.inputStream.close()
-                connection.disconnect()
-            }
-        }.start()
-    }
-}
-// #endregion
 
 private fun peelTrailingEthnicGroups(s: String): String {
     var t = s
@@ -415,19 +377,6 @@ fun HomeScreen(
         if (isRefreshing) {
             return
         }
-        // #region debug-point A:home-refresh-entry
-        reportAndroidHomeEmptyUiDebug(
-            hypothesisId = "A",
-            location = "HomeScreen.refreshHomeData:entry",
-            msg = "Home refresh entered",
-            data = mapOf(
-                "selectedTab" to selectedTab.name,
-                "currentUserIdBlank" to currentUserId.isEmpty(),
-                "showIndicator" to showIndicator,
-                "rotateFeedOrder" to rotateFeedOrder
-            )
-        )
-        // #endregion
         showRefreshIndicator = showIndicator
         isRefreshing = true
         try {
@@ -518,21 +467,6 @@ fun HomeScreen(
         if (repository.squareDiscoveryServices.first().isNotEmpty()) {
             autoRefreshDoneByUser[refreshIdentity] = true
         }
-    }
-
-    LaunchedEffect(squareDiscoveryServices.size, selectedTab, selectedCategoryFilter) {
-        // #region debug-point D:home-ui-observed-list
-        reportAndroidHomeEmptyUiDebug(
-            hypothesisId = "D",
-            location = "HomeScreen.squareDiscoveryServices:observed",
-            msg = "Home UI observed discovery list",
-            data = mapOf(
-                "squareDiscoveryCount" to squareDiscoveryServices.size,
-                "selectedTab" to selectedTab.name,
-                "selectedCategoryFilter" to selectedCategoryFilter
-            )
-        )
-        // #endregion
     }
 
     // Application 异步写入用户时，Splash 可能早于 Room 用户完成；进入首页后再补写种子并刷新列表。
