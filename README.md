@@ -54,7 +54,7 @@ iSanya/
 
 ## 🚀 本地开发与环境配置指南
 
-三端均连接至统一的本地后端服务。为支持真机与模拟器的联合调试，**强烈建议将所有 API 地址配置为开发机的局域网 IP（如 `192.168.x.x`）**，而非 `127.0.0.1` 或 `localhost`。
+三端统一通过公网 `nginx` 入口访问后端，客户端 API 地址默认使用 `https://123.57.67.153`，不再直接配置 `127.0.0.1`、`localhost` 或 `:8000`。
 
 ### 后端环境启动
 ```bash
@@ -64,21 +64,21 @@ source .venv/bin/activate  # Windows 用户使用: .venv\Scripts\activate
 pip install -r requirements.txt
 ./run_dev.sh               # 或者使用 python main.py
 ```
-*服务默认运行在 `http://0.0.0.0:8000`。浏览器访问 `http://127.0.0.1:8000/healthz` 检查是否启动成功。*
+*后端应用默认监听 `http://0.0.0.0:8000`，并由 `nginx` 对外统一转发到 `https://123.57.67.153`。联调时优先访问 `https://123.57.67.153/healthz` 检查是否启动成功。*
 
 ### Android 端开发
 1. 使用 **Android Studio** 打开 `android_isanya` 目录。
 2. **配置接口地址**：
    - 打开文件 `android_isanya/gradle.properties`。
-   - 将 `DEV_API_BASE_URL` 修改为你的局域网 IP 地址（例如：`http://192.168.1.10:8000/`）。
+   - 将 `DEV_API_BASE_URL` 修改为 `https://123.57.67.153/`。
 3. 编译并运行在模拟器或真机上。
 
 ### iOS 端开发
 1. 使用 **Xcode** 打开 iOS 工程（如 `ios_isanya/iSanya/iSanya.xcodeproj`）。
 2. **配置接口地址**：
    - 打开配置文件 `ios_isanya/iSanya/Config/*.xcconfig` 或修改 `Info.plist` 中的相关配置。
-   - 将 `ISANYA_BASE_URL` 修改为你的局域网 IP 地址（例如：`http://192.168.1.10:8000`）。
-   - *注意：iOS 开发环境由于连接 HTTP 后端，需确保已在 Info.plist 中配置 ATS（设置 `NSAllowsArbitraryLoads` 为 `YES`）。*
+   - 将 `ISANYA_BASE_URL` 修改为 `https://123.57.67.153`。
+   - *当前客户端走 HTTPS 公网入口，通常不需要为 HTTP 联调额外放开 ATS。*
 3. 编译并在 iOS 模拟器或 iPhone 真机上运行。
 
 ### 微信小程序开发
@@ -90,7 +90,7 @@ pip install -r requirements.txt
    ```
 3. **配置接口地址**：
    - 打开 `wechat_isanya/config/dev.ts` 文件。
-   - 将 `TARO_APP_API_BASE_URL` 修改为你的局域网 IP 地址。
+   - 将 `TARO_APP_API_BASE_URL` 修改为 `https://123.57.67.153`。
 4. **启动开发服务**：
    ```bash
    npm run dev:weapp
@@ -106,4 +106,4 @@ pip install -r requirements.txt
 - **iOS**: `ios_isanya/iSanya/Config/*.xcconfig` 中的 `ISANYA_BASE_URL`
 - **WeChat**: `wechat_isanya/config/dev.ts` 中的 `TARO_APP_API_BASE_URL`
 
-> 开发过程中，请务必保证手机（或模拟器）与开发电脑处于同一个 Wi-Fi 网络下，并检查防火墙是否允许后端服务的端口被访问。
+> 当前推荐联调方式是统一走 `https://123.57.67.153`，避免客户端直接连 `:8000` 导致配置分叉。

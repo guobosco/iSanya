@@ -21,9 +21,9 @@ npm run dev:weapp
 
 ## 后端联调
 
-默认读取 `TARO_APP_API_BASE_URL`，未配置时使用 `http://127.0.0.1:8000`。
+默认读取 `TARO_APP_API_BASE_URL`，推荐统一配置为 `https://123.57.67.153`。
 
-- 微信开发者工具内建议改成你 Mac 的局域网 IP，例如 `http://192.168.1.10:8000`
+- 微信开发者工具内也统一使用 `https://123.57.67.153`
 - 后端需先运行 `backend/main.py`
 
 ## 测试账号

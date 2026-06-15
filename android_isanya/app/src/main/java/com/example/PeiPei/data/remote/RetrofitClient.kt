@@ -20,14 +20,27 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.lang.reflect.Type
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import java.util.Date
 import java.util.concurrent.TimeUnit
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 
 object RetrofitClient {
     val BASE_URL: String = if (BuildConfig.API_BASE_URL.endsWith("/")) {
         BuildConfig.API_BASE_URL
     } else {
         "${BuildConfig.API_BASE_URL}/"
+    }
+
+    private val allowInsecureTlsForDebugIp =
+        BuildConfig.DEBUG && BuildConfig.API_BASE_URL.contains("123.57.67.153")
+
+    private val insecureTrustManager = object : X509TrustManager {
+        override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+        override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+        override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
     }
 
     /**
@@ -127,14 +140,22 @@ object RetrofitClient {
         chain.proceed(request)
     }
 
-    private val okHttpClient = OkHttpClient.Builder()
-        .addInterceptor(authInterceptor)
-        .addInterceptor(loggingInterceptor)
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .callTimeout(20, TimeUnit.SECONDS)
-        .build()
+    private val okHttpClient = OkHttpClient.Builder().apply {
+        addInterceptor(authInterceptor)
+        addInterceptor(loggingInterceptor)
+        connectTimeout(8, TimeUnit.SECONDS)
+        readTimeout(15, TimeUnit.SECONDS)
+        writeTimeout(15, TimeUnit.SECONDS)
+        callTimeout(20, TimeUnit.SECONDS)
+
+        if (allowInsecureTlsForDebugIp) {
+            val sslContext = SSLContext.getInstance("TLS").apply {
+                init(null, arrayOf(insecureTrustManager), SecureRandom())
+            }
+            sslSocketFactory(sslContext.socketFactory, insecureTrustManager)
+            hostnameVerifier { _, _ -> true }
+        }
+    }.build()
 
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)

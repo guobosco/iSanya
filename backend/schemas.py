@@ -220,6 +220,40 @@ class ServiceBase(BaseModel):
         text = str(value).strip()
         return "其他服务" if not text else text
 
+    @field_validator(
+        "title",
+        "description",
+        "cover_image_url",
+        "location",
+        "price_text",
+        "service_mode",
+        "creator",
+        mode="before"
+    )
+    @classmethod
+    def normalize_service_text_fields(cls, value):
+        return "" if value is None else str(value)
+
+    @field_validator("service_time", mode="before")
+    @classmethod
+    def normalize_service_time(cls, value):
+        if value is None:
+            return 0
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
+    @field_validator("sync_to_square", "is_important", "is_deleted", mode="before")
+    @classmethod
+    def normalize_service_bool_fields(cls, value):
+        return False if value is None else value
+
+    @field_validator("is_synced", mode="before")
+    @classmethod
+    def normalize_is_synced(cls, value):
+        return True if value is None else value
+
 
 class ServiceCreate(ServiceBase):
     id: str
@@ -233,6 +267,21 @@ class Service(ServiceBase):
     creator_id: str
     created_at: int
     updated_at: int
+
+    @field_validator("id", "creator_id", mode="before")
+    @classmethod
+    def normalize_service_identity_fields(cls, value):
+        return "" if value is None else str(value)
+
+    @field_validator("created_at", "updated_at", mode="before")
+    @classmethod
+    def normalize_service_timestamp_fields(cls, value):
+        if value is None:
+            return 0
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
 
     class Config:
         from_attributes = True

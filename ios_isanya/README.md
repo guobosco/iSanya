@@ -26,19 +26,17 @@
 
 在工程的 Info.plist 增加键：
 - `ISANYA_BASE_URL`（String）
-  - iOS 模拟器联调：`http://127.0.0.1:8000`
-  - 真机联调：`http://{你的Mac局域网IP}:8000`（例如 `http://192.168.1.10:8000`）
+  - Debug：`https://123.57.67.153`
+  - Release：`https://123.57.67.153`
 
-不配置时默认使用 `http://127.0.0.1:8000`。
+不配置时也建议统一使用 `https://123.57.67.153`，不要再配回 `:8000`。
 
 如果你希望按 Debug/Release 分环境配置，推荐用 Build Setting 注入：
 1. 在 Target → Build Settings → User-Defined 新增 `ISANYA_BASE_URL`
 2. 在 Debug/Release 分别填不同值
 3. 在 Info.plist 的 `ISANYA_BASE_URL` 值填写 `$(ISANYA_BASE_URL)`
 
-注意：后端是 http（非 https），开发环境需要配置 ATS（否则请求会被系统拦截）：
-1. Info.plist 增加 `NSAppTransportSecurity`（Dictionary）
-2. 其下增加 `NSAllowsArbitraryLoads`（Boolean）为 `YES`
+当前推荐走 `nginx` 暴露的 HTTPS 入口，一般不需要为 HTTP 请求额外放开 ATS。
 
 ## 4. 本地后端联调
 
@@ -50,15 +48,12 @@
 5. `python main.py`
 
 验证服务是否可用：
-- 浏览器打开 `http://127.0.0.1:8000/healthz`，应返回 `{"status":"ok", ...}`
+- 浏览器打开 `https://123.57.67.153/healthz`，应返回 `{"status":"ok", ...}`
 
-iOS 模拟器联调：
-- BaseURL 用 `http://127.0.0.1:8000`
-
-真机联调：
-- BaseURL 用 `http://{你的Mac局域网IP}:8000`
-- 确保手机与 Mac 在同一 Wi-Fi
-- macOS 防火墙允许 Python/uvicorn 监听端口（后端默认 host=0.0.0.0、port=8000）
+iOS 模拟器与真机联调：
+- BaseURL 统一用 `https://123.57.67.153`
+- 不再使用本机回环地址、局域网 IP 或 `:8000`
+- 后端应用仍可在服务器内部监听 `0.0.0.0:8000`，但客户端只通过 `nginx` 入口访问
 
 ## 5. 目前可用能力
 
