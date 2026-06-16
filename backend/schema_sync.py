@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import OperationalError
@@ -6,7 +7,13 @@ from sqlalchemy.exc import OperationalError
 
 JSON_LIST_DEFAULTS = {
     "users": {"tags", "favorite_service_ids", "profile_image_urls"},
-    "services": {"image_urls", "participant_ids", "service_declarations_extra"},
+    "services": {
+        "image_urls",
+        "participant_ids",
+        "service_declarations_extra",
+        "service_feature_tags",
+        "service_extra_fee_tags",
+    },
     "experiences": {"image_urls", "tags"},
 }
 
@@ -53,9 +60,19 @@ def _quoted(name: str) -> str:
     return f'"{name}"'
 
 
-def _default_sql_literal(table_name: str, column_name: str):
+def _default_sql_literal(table_name: str, column_name: str, column: Any = None):
     if column_name in JSON_LIST_DEFAULTS.get(table_name, set()):
         return "'[]'"
+    if column is not None and column.default is not None:
+        default_arg = getattr(column.default, "arg", None)
+        if callable(default_arg):
+            return None
+        if isinstance(default_arg, bool):
+            return "1" if default_arg else "0"
+        if isinstance(default_arg, (int, float)):
+            return str(default_arg)
+        if isinstance(default_arg, str):
+            return "'" + default_arg.replace("'", "''") + "'"
     return None
 
 
@@ -134,7 +151,7 @@ def sync_sqlite_schema(engine, metadata):
                     f"ALTER TABLE {_quoted(table_name)} "
                     f"ADD COLUMN {_quoted(column.name)} {sql_type}"
                 )
-                default_sql = _default_sql_literal(table_name, column.name)
+                default_sql = _default_sql_literal(table_name, column.name, column)
                 if default_sql is not None:
                     statement = f"{statement} DEFAULT {default_sql}"
                 statement = f"{statement};"
@@ -190,6 +207,25 @@ def sync_sqlite_schema(engine, metadata):
                         f'WHERE {_quoted(column_name)} IS NULL'
                     ),
                     {"value": json.dumps([])},
+                )
+
+        for table_name, table in metadata.tables.items():
+            if not inspector.has_table(table_name):
+                continue
+
+            existing_columns = {column["name"] for column in inspector.get_columns(table_name)}
+            for column in table.columns:
+                if column.name not in existing_columns:
+                    continue
+                default_sql = _default_sql_literal(table_name, column.name, column)
+                if default_sql is None:
+                    continue
+                connection.execute(
+                    text(
+                        f'UPDATE {_quoted(table_name)} '
+                        f'SET {_quoted(column.name)} = {default_sql} '
+                        f'WHERE {_quoted(column.name)} IS NULL'
+                    )
                 )
 
     return executed_statements

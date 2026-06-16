@@ -143,12 +143,22 @@ class ServiceBase(BaseModel):
     sync_to_square: bool = False
     participant_ids: List[str] = Field(default_factory=list)
     service_declarations_extra: List[str] = Field(default_factory=list)
+    service_feature_tags: List[str] = Field(default_factory=list)
+    service_extra_fee_tags: List[str] = Field(default_factory=list)
     creator: str = ""
     is_important: bool = False
     is_deleted: bool = False
+    is_draft: bool = False
     is_synced: bool = True
 
-    @field_validator("image_urls", "participant_ids", "service_declarations_extra", mode="before")
+    @field_validator(
+        "image_urls",
+        "participant_ids",
+        "service_declarations_extra",
+        "service_feature_tags",
+        "service_extra_fee_tags",
+        mode="before"
+    )
     @classmethod
     def normalize_service_list_fields(cls, value):
         if value is None:
@@ -252,7 +262,7 @@ class ServiceBase(BaseModel):
         except (TypeError, ValueError):
             return 0
 
-    @field_validator("sync_to_square", "is_important", "is_deleted", mode="before")
+    @field_validator("sync_to_square", "is_important", "is_deleted", "is_draft", mode="before")
     @classmethod
     def normalize_service_bool_fields(cls, value):
         return False if value is None else value

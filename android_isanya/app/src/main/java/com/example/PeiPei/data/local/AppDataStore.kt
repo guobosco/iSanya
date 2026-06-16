@@ -13,6 +13,7 @@ import com.example.Lulu.data.model.HostServiceBooking
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.ServiceDeclarations
+import com.example.Lulu.data.model.ServicePublishTaxonomy
 import com.example.Lulu.data.model.User
 import com.example.Lulu.data.repository.LuluRepository
 import com.example.Lulu.util.BookingTimeRangesCodec
@@ -164,8 +165,11 @@ object AppDataStore {
         fullRefundCancelLeadDays: Int = 1,
         autoAcceptAfterPayment: Boolean = true,
         serviceDeclarationsExtra: List<String> = emptyList(),
+        serviceFeatureTags: List<String> = emptyList(),
+        serviceExtraFeeTags: List<String> = emptyList(),
         isDraft: Boolean = false,
     ): Service {
+        val normalizedCategory = ServiceCategories.normalize(category)
         val item = Service(
             id = UUID.randomUUID().toString(),
             title = title,
@@ -177,13 +181,15 @@ object AppDataStore {
             priceBasisText = priceBasisText,
             prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
             fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
-            category = ServiceCategories.normalize(category),
+            category = normalizedCategory,
             serviceMode = serviceMode,
             bookingTimeRangesJson = bookingTimeRangesJson,
             bookingLeadHours = BookingTimeRangesCodec.normalizeBookingLeadHours(bookingLeadHours),
             bookingFutureOpenDays = BookingTimeRangesCodec.normalizeBookingFutureOpenDays(bookingFutureOpenDays),
             autoAcceptAfterPayment = autoAcceptAfterPayment,
             serviceDeclarationsExtra = ServiceDeclarations.normalizeExtra(serviceDeclarationsExtra),
+            serviceFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(normalizedCategory, serviceFeatureTags),
+            serviceExtraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(normalizedCategory, serviceExtraFeeTags),
             syncToSquare = syncToSquare,
             creator = _currentUser.value.name,
             creatorId = _currentUser.value.id,
@@ -220,13 +226,24 @@ object AppDataStore {
         autoAcceptAfterPayment: Boolean = true,
         /** null 表示保留原有补充声明 */
         serviceDeclarationsExtra: List<String>? = null,
+        /** null 表示保留原有服务特点 */
+        serviceFeatureTags: List<String>? = null,
+        /** null 表示保留原有额外费用标签 */
+        serviceExtraFeeTags: List<String>? = null,
         /** null 表示保留原草稿/已发布标记 */
         isDraft: Boolean? = null,
     ) {
         scope.launch {
             val existing = getServiceById(id) ?: return@launch
+            val normalizedCategory = ServiceCategories.normalize(category)
             val resolvedExtra = serviceDeclarationsExtra?.let { ServiceDeclarations.normalizeExtra(it) }
                 ?: existing.serviceDeclarationsExtra
+            val resolvedFeatureTags = serviceFeatureTags?.let {
+                ServicePublishTaxonomy.normalizeFeatureTags(normalizedCategory, it)
+            } ?: existing.serviceFeatureTags
+            val resolvedExtraFeeTags = serviceExtraFeeTags?.let {
+                ServicePublishTaxonomy.normalizeExtraFeeTags(normalizedCategory, it)
+            } ?: existing.serviceExtraFeeTags
             val updated = existing.copy(
                 title = title,
                 description = note,
@@ -237,7 +254,7 @@ object AppDataStore {
                 priceBasisText = priceBasisText,
                 prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
                 fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
-                category = ServiceCategories.normalize(category),
+                category = normalizedCategory,
                 serviceMode = serviceMode,
                 bookingTimeRangesJson = bookingTimeRangesJson,
                 bookingLeadHours = BookingTimeRangesCodec.normalizeBookingLeadHours(bookingLeadHours),
@@ -245,6 +262,8 @@ object AppDataStore {
                     ?: existing.bookingFutureOpenDays,
                 autoAcceptAfterPayment = autoAcceptAfterPayment,
                 serviceDeclarationsExtra = resolvedExtra,
+                serviceFeatureTags = resolvedFeatureTags,
+                serviceExtraFeeTags = resolvedExtraFeeTags,
                 syncToSquare = syncToSquare,
                 participantIds = participantIds,
                 isImportant = isImportant,

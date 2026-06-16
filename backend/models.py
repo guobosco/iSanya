@@ -30,13 +30,13 @@ class User(Base):
     # 头像 URL
     photo_url = Column(String, nullable=True)
     # 资料照片墙
-    profile_image_urls = Column(JSON, default=[])
+    profile_image_urls = Column(JSON, default=list)
     # 备注名
     remark_name = Column(String, default="")
     # 标签列表，存储为 JSON 数组
-    tags = Column(JSON, default=[]) 
+    tags = Column(JSON, default=list) 
     # 收藏的服务 ID 列表（心愿单）
-    favorite_service_ids = Column(JSON, default=[])
+    favorite_service_ids = Column(JSON, default=list)
     # 个性签名
     signature = Column(String, default="")
     # 备忘录/备注信息
@@ -59,7 +59,7 @@ class User(Base):
     # 中学时最喜欢的歌曲
     middle_school_favorite_song = Column(String, default="")
     # 掌握语言
-    spoken_languages = Column(JSON, default=[])
+    spoken_languages = Column(JSON, default=list)
     # 常住城市
     living_city = Column(String, default="")
     # 常住国家
@@ -73,7 +73,7 @@ class User(Base):
     # 服务经验（年）
     service_years = Column(Integer, default=0)
     # 评价摘要
-    review_summaries = Column(JSON, default=[])
+    review_summaries = Column(JSON, default=list)
     
     # --- 状态与标志 (Status & Flags) ---
     # 手机号是否已验证
@@ -117,7 +117,7 @@ class Service(Base):
     title = Column(String, default="")
     description = Column(Text, default="")
     cover_image_url = Column(String, default="")
-    image_urls = Column(JSON, default=[])
+    image_urls = Column(JSON, default=list)
     location = Column(String, default="")
     price_text = Column(String, default="")
     # 计价说明（与客户端 price_basis_text 一致）
@@ -134,9 +134,14 @@ class Service(Base):
     auto_accept_after_payment = Column(Boolean, default=True)
     sync_to_square = Column(Boolean, default=False)
     # 用户追加的服务声明（不含平台默认四条，由客户端合并展示）
-    service_declarations_extra = Column(JSON, default=[])
-    participant_ids = Column(JSON, default=[])
+    service_declarations_extra = Column(JSON, default=list)
+    # 发布者选择的服务特点标签
+    service_feature_tags = Column(JSON, default=list)
+    # 发布者选择的额外费用标签
+    service_extra_fee_tags = Column(JSON, default=list)
+    participant_ids = Column(JSON, default=list)
     is_important = Column(Boolean, default=False)
+    is_draft = Column(Boolean, default=False, nullable=False)
     creator_id = Column(String, ForeignKey("users.id"), index=True)
     creator = Column(String, default="")
     created_at = Column(BigInteger, default=0)
@@ -158,14 +163,14 @@ class Experience(Base):
     title = Column(String, default="")
     description = Column(Text, default="")
     cover_image_url = Column(String, default="")
-    image_urls = Column(JSON, default=[])
+    image_urls = Column(JSON, default=list)
     location = Column(String, default="")
     price_text = Column(String, default="")
     price_basis_text = Column(String, default="")
     category = Column(String, default="其他体验")
     duration_text = Column(String, default="")
     badge_text = Column(String, default="")
-    tags = Column(JSON, default=[])
+    tags = Column(JSON, default=list)
     host_id = Column(String, ForeignKey("users.id"), index=True)
     host_name = Column(String, default="")
     created_at = Column(BigInteger, default=0)
@@ -205,7 +210,7 @@ class Conversation(Base):
     title = Column(String, default="")
     owner_id = Column(String, ForeignKey("users.id"), nullable=True)
     avatar_url = Column(String, default="")
-    participant_ids = Column(JSON, default=[])
+    participant_ids = Column(JSON, default=list)
     last_message_id = Column(String, nullable=True)
     last_message_preview = Column(String, default="")
     last_message_at = Column(BigInteger, default=0)
@@ -241,7 +246,7 @@ class ChatMessage(Base):
     attachment_name = Column(String, default="")
     attachment_size = Column(BigInteger, default=0)
     object_key = Column(String, default="")
-    extra = Column(JSON, default={})
+    extra = Column(JSON, default=dict)
     client_message_id = Column(String, index=True, nullable=True)
     status = Column(String, default="sent")
     created_at = Column(BigInteger, default=0)

@@ -81,4 +81,10 @@ data class Service(
     /** 用户追加的服务声明（不含平台默认四条，默认条目由客户端合并展示） */
     @SerializedName("service_declarations_extra")
     val serviceDeclarationsExtra: List<String> = emptyList(),
+    /** 发布时选择的服务特点标签。 */
+    @SerializedName("service_feature_tags")
+    val serviceFeatureTags: List<String> = emptyList(),
+    /** 发布时选择的额外费用标签。 */
+    @SerializedName("service_extra_fee_tags")
+    val serviceExtraFeeTags: List<String> = emptyList(),
 )

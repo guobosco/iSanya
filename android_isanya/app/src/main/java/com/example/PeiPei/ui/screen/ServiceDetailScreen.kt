@@ -120,6 +120,7 @@ import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.ServiceDeclarations
+import com.example.Lulu.data.model.ServicePublishTaxonomy
 import com.example.Lulu.data.repository.UserRepository
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.ui.viewmodel.PendingHostProfileHint
@@ -158,10 +159,14 @@ private fun buildServiceExtraFeeDescription(service: Service): String {
     } else {
         lines += "当前无需预付款，最终金额以沟通确认为准。"
     }
+    val extraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(service.category, service.serviceExtraFeeTags)
+    if (extraFeeTags.isNotEmpty()) {
+        lines += "可能涉及：${extraFeeTags.joinToString("、")}。"
+    }
     val extraRules = ServiceDeclarations.normalizeExtra(service.serviceDeclarationsExtra)
-    if (extraRules.isEmpty()) {
+    if (extraFeeTags.isEmpty() && extraRules.isEmpty()) {
         lines += "节假日、跨区交通、超时加购、门票或场地等额外费用如有发生，需提前与主理人确认。"
-    } else {
+    } else if (extraRules.isNotEmpty()) {
         lines += "补充说明：${extraRules.take(2).joinToString("；")}"
     }
     return lines.joinToString("\n")
@@ -230,10 +235,12 @@ private fun buildServiceTypeDescription(service: Service): String {
     val category = ServiceCategories.normalize(service.category)
     val serviceMode = service.serviceMode.trim()
     val priceBasis = priceBasisTextForUiDisplay(service.priceBasisText, service.serviceMode).trim()
+    val featureTags = ServicePublishTaxonomy.normalizeFeatureTags(category, service.serviceFeatureTags)
     val parts = buildList {
         if (category.isNotBlank()) add("这是一个${category}服务")
         if (serviceMode.isNotBlank()) add("通常以${serviceMode}方式提供")
         if (priceBasis.isNotBlank()) add("计费说明为$priceBasis")
+        if (featureTags.isNotEmpty()) add("特点包括${featureTags.joinToString("、")}")
     }
     return if (parts.isNotEmpty()) {
         parts.joinToString("，") + "，具体安排请与主理人沟通确认。"
@@ -246,6 +253,7 @@ private fun buildServiceKeywordTags(service: Service): List<String> {
     val category = ServiceCategories.normalize(service.category)
     val serviceMode = service.serviceMode.trim()
     val priceBasis = priceBasisTextForUiDisplay(service.priceBasisText, service.serviceMode).trim()
+    val selectedFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(category, service.serviceFeatureTags)
     val searchableText = listOf(
         service.title,
         service.description,
@@ -258,9 +266,10 @@ private fun buildServiceKeywordTags(service: Service): List<String> {
     }
     return buildList {
         if (category.isNotBlank()) add(category)
+        addAll(selectedFeatureTags)
         if (serviceMode.isNotBlank()) add(serviceMode)
         if (priceBasis.isNotBlank()) add(priceBasis)
-        addAll(matchedSignals)
+        addAll(matchedSignals.filterNot(selectedFeatureTags::contains))
     }.distinct().take(8)
 }
 
@@ -427,6 +436,7 @@ fun ServiceDetailScreen(
     val tagList = buildList {
         val cat = ServiceCategories.normalize(service!!.category)
         if (cat.isNotBlank()) add(cat)
+        addAll(ServicePublishTaxonomy.normalizeFeatureTags(cat, service!!.serviceFeatureTags).take(2))
         if (service!!.serviceMode.isNotBlank()) add(service!!.serviceMode)
         val basis = priceBasisTextForUiDisplay(service!!.priceBasisText, service!!.serviceMode)
         if (basis.isNotBlank()) add(basis)

@@ -55,6 +55,7 @@ import com.example.Lulu.R
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.ServiceCategories
+import com.example.Lulu.data.model.ServicePublishTaxonomy
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.components.PrimaryGradientButton
 import com.example.Lulu.ui.theme.DialogTitleTopPadding
@@ -102,9 +103,10 @@ import com.example.Lulu.ui.components.PublishPriceSettingsBottomSheet
 import com.example.Lulu.ui.components.BookingTimeRangesPickerBottomSheet
 import com.example.Lulu.ui.components.OrderAcceptanceSettingsBottomSheet
 import com.example.Lulu.ui.components.orderAcceptanceSettingSummary
-import com.example.Lulu.ui.components.ServiceAreaMapPickerDialog
 import com.example.Lulu.ui.components.ServiceDeclarationsPickerBottomSheet
 import com.example.Lulu.ui.components.ServiceCategoryPickerGateDialog
+import com.example.Lulu.ui.components.ServiceTagMultiSelectBottomSheet
+import com.example.Lulu.ui.components.RegionPickerDialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 
@@ -160,6 +162,8 @@ fun CreateServiceScreen(
         mutableStateOf(!isEditMode && initialCategory.isNullOrBlank())
     }
     var locationText by remember { mutableStateOf("") }
+    var serviceFeatureTags by remember { mutableStateOf(listOf<String>()) }
+    var showServiceFeaturePicker by remember { mutableStateOf(false) }
     var syncToSquare by remember { mutableStateOf(true) }
     var serviceImageUris by remember { mutableStateOf<List<String>>(emptyList()) }
     val maxServiceImageCount = 16
@@ -226,7 +230,9 @@ fun CreateServiceScreen(
     var showOrderAcceptanceSheet by remember { mutableStateOf(false) }
     /** true：付款后自动接单；false：付款后需手动确认订单信息再接单 */
     var autoAcceptAfterPayment by remember { mutableStateOf(true) }
-    var showServiceAreaMapPicker by remember { mutableStateOf(false) }
+    var showServiceCityPicker by remember { mutableStateOf(false) }
+    var serviceExtraFeeTags by remember { mutableStateOf(listOf<String>()) }
+    var showServiceExtraFeePicker by remember { mutableStateOf(false) }
     /** 用户补充的服务声明（不含平台默认四条） */
     var extraServiceDeclarations by remember { mutableStateOf(listOf<String>()) }
     var showServiceDeclarationsSheet by remember { mutableStateOf(false) }
@@ -265,6 +271,10 @@ fun CreateServiceScreen(
                     ?: service.serviceMode.ifBlank { DURATION_UNIT_HOURS }
                 serviceCategory = ServiceCategories.normalize(service.category)
                 locationText = service.location
+                serviceFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(
+                    service.category,
+                    service.serviceFeatureTags
+                )
                 syncToSquare = service.syncToSquare
                 serviceImageUris = service.imageUrls.ifEmpty {
                     service.coverImageUrl.takeIf { it.isNotBlank() }?.let { listOf(it) } ?: emptyList()
@@ -275,6 +285,10 @@ fun CreateServiceScreen(
                 bookingFutureOpenDays =
                     BookingTimeRangesCodec.normalizeBookingFutureOpenDays(service.bookingFutureOpenDays)
                 autoAcceptAfterPayment = service.autoAcceptAfterPayment
+                serviceExtraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(
+                    service.category,
+                    service.serviceExtraFeeTags
+                )
                 extraServiceDeclarations = service.serviceDeclarationsExtra
 
                 // 恢复参与者 (包含自己)
@@ -299,6 +313,18 @@ fun CreateServiceScreen(
             // 新建服务，默认选中自己
             selectedParticipants = listOf(currentUser)
         }
+    }
+
+    LaunchedEffect(serviceCategory) {
+        val normalizedCategory = ServiceCategories.normalize(serviceCategory)
+        serviceFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(
+            normalizedCategory,
+            serviceFeatureTags
+        )
+        serviceExtraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(
+            normalizedCategory,
+            serviceExtraFeeTags
+        )
     }
 
     // 执行保存
@@ -335,6 +361,8 @@ fun CreateServiceScreen(
                 prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
                 fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
                 autoAcceptAfterPayment = autoAcceptAfterPayment,
+                serviceFeatureTags = serviceFeatureTags,
+                serviceExtraFeeTags = serviceExtraFeeTags,
                 serviceDeclarationsExtra = extraServiceDeclarations,
                 isDraft = false,
             )
@@ -371,6 +399,8 @@ fun CreateServiceScreen(
                 prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
                 fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
                 autoAcceptAfterPayment = autoAcceptAfterPayment,
+                serviceFeatureTags = serviceFeatureTags,
+                serviceExtraFeeTags = serviceExtraFeeTags,
                 serviceDeclarationsExtra = extraServiceDeclarations,
                 isDraft = false,
             )
@@ -428,6 +458,8 @@ fun CreateServiceScreen(
                     prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
                     fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
                     autoAcceptAfterPayment = autoAcceptAfterPayment,
+                    serviceFeatureTags = serviceFeatureTags,
+                    serviceExtraFeeTags = serviceExtraFeeTags,
                     serviceDeclarationsExtra = extraServiceDeclarations,
                     isDraft = true,
                 )
@@ -451,12 +483,29 @@ fun CreateServiceScreen(
                     prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
                     fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
                     autoAcceptAfterPayment = autoAcceptAfterPayment,
+                    serviceFeatureTags = serviceFeatureTags,
+                    serviceExtraFeeTags = serviceExtraFeeTags,
                     serviceDeclarationsExtra = extraServiceDeclarations,
                     isDraft = true,
                 )
                 localDraftServiceId = newService.id
             }
             android.widget.Toast.makeText(context, "已存为草稿", android.widget.Toast.LENGTH_SHORT).show()
+            val previousRoute = navController.previousBackStackEntry?.destination?.route.orEmpty()
+            if (previousRoute.startsWith(Screen.MyPublishedServices.baseRoute)) {
+                navController.navigate(
+                    Screen.MyPublishedServices.createRoute(initialSection = "drafts")
+                ) {
+                    popUpTo(Screen.MyPublishedServices.route) { inclusive = true }
+                    launchSingleTop = true
+                }
+            } else {
+                navController.navigate(
+                    Screen.MyPublishedServices.createRoute(initialSection = "drafts")
+                ) {
+                    popUpTo(Screen.CreateService.route) { inclusive = true }
+                }
+            }
         } finally {
             isSubmitting = false
         }
@@ -761,6 +810,19 @@ fun CreateServiceScreen(
                             valueColor = if (serviceCategory == null) placeholderColor else MaterialTheme.colorScheme.onSurfaceVariant,
                             onClick = { showCategoryDialog = true }
                         )
+                        HorizontalDivider(color = dividerColor, modifier = Modifier.padding(top = 4.dp))
+                        PublishOptionRow(
+                            label = "服务特点",
+                            value = ServicePublishTaxonomy.selectionSummary(serviceFeatureTags),
+                            valueColor = if (serviceFeatureTags.isEmpty()) placeholderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                            onClick = {
+                                if (serviceCategory == null) {
+                                    errorMessage = "请先选择服务类别"
+                                } else {
+                                    showServiceFeaturePicker = true
+                                }
+                            }
+                        )
                         if (errorMessage != null) {
                             Text(
                                 text = errorMessage!!,
@@ -822,10 +884,23 @@ fun CreateServiceScreen(
                         )
                         HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 16.dp))
                         PublishOptionRow(
-                            label = "服务区域",
+                            label = "服务城市",
                             value = ServiceLocationPolygonCodec.displayLine(locationText).ifBlank { "去设置" },
                             valueColor = if (locationText.isBlank()) placeholderColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                            onClick = { showServiceAreaMapPicker = true }
+                            onClick = { showServiceCityPicker = true }
+                        )
+                        HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 16.dp))
+                        PublishOptionRow(
+                            label = "额外费用",
+                            value = ServicePublishTaxonomy.selectionSummary(serviceExtraFeeTags),
+                            valueColor = if (serviceExtraFeeTags.isEmpty()) placeholderColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                            onClick = {
+                                if (serviceCategory == null) {
+                                    errorMessage = "请先选择服务类别"
+                                } else {
+                                    showServiceExtraFeePicker = true
+                                }
+                            }
                         )
                         HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 16.dp))
                         val extraDeclCount = extraServiceDeclarations.count { it.isNotBlank() }
@@ -969,14 +1044,62 @@ fun CreateServiceScreen(
         )
     }
 
-    if (showServiceAreaMapPicker) {
-        ServiceAreaMapPickerDialog(
-            initialEncodedLocation = locationText,
-            onDismiss = { showServiceAreaMapPicker = false },
-            onConfirm = { encoded ->
-                locationText = encoded
-                showServiceAreaMapPicker = false
+    if (showServiceCityPicker) {
+        RegionPickerDialog(
+            initialRegion = ServiceLocationPolygonCodec.displayLine(locationText),
+            title = "选择服务城市",
+            confirmSelection = { _, city -> city },
+            onDismiss = { showServiceCityPicker = false },
+            onConfirm = { city ->
+                locationText = city
+                showServiceCityPicker = false
             }
+        )
+    }
+
+    if (showServiceFeaturePicker) {
+        val currentCategory = ServiceCategories.normalize(serviceCategory)
+        val options = ServicePublishTaxonomy.featureTagsFor(currentCategory)
+        val sheetOnBg = if (isDarkTheme) Color.White else Color(0xFF111111)
+        val sheetMuted = if (isDarkTheme) Color(0xFF8E8E8E) else Color(0xFF666666)
+        ServiceTagMultiSelectBottomSheet(
+            title = "服务特点",
+            subtitle = "可多选，建议勾选最能代表这个${currentCategory}服务的标签",
+            options = options,
+            initialSelected = serviceFeatureTags,
+            surfaceColor = cardColor,
+            onBackgroundColor = sheetOnBg,
+            onSurfaceVariantColor = sheetMuted,
+            dividerColor = dividerColor,
+            accentColor = themeAccentRed,
+            onDismiss = { showServiceFeaturePicker = false },
+            onConfirm = { selected ->
+                serviceFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(currentCategory, selected)
+                showServiceFeaturePicker = false
+            },
+        )
+    }
+
+    if (showServiceExtraFeePicker) {
+        val currentCategory = ServiceCategories.normalize(serviceCategory)
+        val options = ServicePublishTaxonomy.extraFeeTagsFor(currentCategory)
+        val sheetOnBg = if (isDarkTheme) Color.White else Color(0xFF111111)
+        val sheetMuted = if (isDarkTheme) Color(0xFF8E8E8E) else Color(0xFF666666)
+        ServiceTagMultiSelectBottomSheet(
+            title = "额外费用",
+            subtitle = "可多选，勾选可能由用户另行承担或沟通确认的费用",
+            options = options,
+            initialSelected = serviceExtraFeeTags,
+            surfaceColor = cardColor,
+            onBackgroundColor = sheetOnBg,
+            onSurfaceVariantColor = sheetMuted,
+            dividerColor = dividerColor,
+            accentColor = themeAccentRed,
+            onDismiss = { showServiceExtraFeePicker = false },
+            onConfirm = { selected ->
+                serviceExtraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(currentCategory, selected)
+                showServiceExtraFeePicker = false
+            },
         )
     }
 

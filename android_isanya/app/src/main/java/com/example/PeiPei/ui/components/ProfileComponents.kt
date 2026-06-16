@@ -929,6 +929,10 @@ fun RegionPickerDialog(
     locatedCityOption: RegionPickerLocatedCityOption? = null,
     /** 逆地理成功时回调原始串（如省+市连写），用于刷新顶部「定位城市」等 */
     onDeviceLocationResolved: ((String) -> Unit)? = null,
+    title: String = "选择地区",
+    confirmSelection: (province: String, city: String) -> String = { province, city ->
+        if (province == city) province else "$province $city"
+    },
 ) {
     val context = LocalContext.current
     
@@ -942,10 +946,15 @@ fun RegionPickerDialog(
     val provinceListState = rememberLazyListState()
     val cityListState = rememberLazyListState()
 
-    var selectedProvince by remember { 
-        mutableStateOf(
-            provinces.find { initialRegion.startsWith(it) } ?: provinces.first()
-        ) 
+    val initialProvince = remember(initialRegion) {
+        provinces.find { initialRegion.startsWith(it) }
+            ?: citiesMap.entries.firstOrNull { (_, cities) ->
+                cities.any { city -> initialRegion.endsWith(city) || initialRegion == city }
+            }?.key
+            ?: provinces.first()
+    }
+    var selectedProvince by remember {
+        mutableStateOf(initialProvince)
     }
     
     // Initialize selectedCity based on initialRegion or default to first city of selectedProvince
@@ -1030,12 +1039,9 @@ fun RegionPickerDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = onDismiss) { Text("取消", color = Color.Gray) }
-                Text("选择地区", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 TextButton(onClick = {
-                    val region =
-                        if (selectedProvince == selectedCity) selectedProvince
-                        else "$selectedProvince $selectedCity"
-                    onConfirm(region)
+                    onConfirm(confirmSelection(selectedProvince, selectedCity))
                 }) {
                     Text("确定", color = MaterialTheme.colorScheme.primary)
                 }

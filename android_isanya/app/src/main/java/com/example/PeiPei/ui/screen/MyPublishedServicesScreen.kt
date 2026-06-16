@@ -22,8 +22,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as lazyGridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items as lazyColumnItems
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -83,19 +86,70 @@ private val SearchBarFontSize = 14.sp
 private val SearchBarLineHeight = 18.sp
 private val SearchBarHeight = 30.dp
 
+private enum class MyPublishedSectionAnchor {
+    PUBLISHED,
+    DRAFTS,
+    CANCELLED,
+}
+
+private fun parseMyPublishedSectionAnchor(raw: String?): MyPublishedSectionAnchor =
+    when (raw?.trim()?.lowercase()) {
+        "draft",
+        "drafts" -> MyPublishedSectionAnchor.DRAFTS
+        "cancelled",
+        "canceled" -> MyPublishedSectionAnchor.CANCELLED
+        else -> MyPublishedSectionAnchor.PUBLISHED
+    }
+
+private fun listSectionTitleIndex(
+    anchor: MyPublishedSectionAnchor,
+    publishedCount: Int,
+    draftCount: Int,
+): Int =
+    when (anchor) {
+        MyPublishedSectionAnchor.PUBLISHED -> 1
+        MyPublishedSectionAnchor.DRAFTS -> {
+            val publishedBlockCount = if (publishedCount == 0) 1 else publishedCount * 2
+            3 + publishedBlockCount
+        }
+        MyPublishedSectionAnchor.CANCELLED -> {
+            val publishedBlockCount = if (publishedCount == 0) 1 else publishedCount * 2
+            val draftBlockCount = if (draftCount == 0) 1 else draftCount * 2
+            5 + publishedBlockCount + draftBlockCount
+        }
+    }
+
+private fun gridSectionTitleIndex(
+    anchor: MyPublishedSectionAnchor,
+    publishedCount: Int,
+    draftCount: Int,
+): Int =
+    when (anchor) {
+        MyPublishedSectionAnchor.PUBLISHED -> 1
+        MyPublishedSectionAnchor.DRAFTS -> 2 + maxOf(publishedCount, 1)
+        MyPublishedSectionAnchor.CANCELLED -> 4 + maxOf(publishedCount, 1) + maxOf(draftCount, 1)
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyPublishedServicesScreen(navController: NavController) {
+fun MyPublishedServicesScreen(
+    navController: NavController,
+    initialSection: String? = null,
+) {
     val repository = remember { runCatching { LuluRepository.get() }.getOrNull() }
     val hubFlow = remember(repository) {
         repository?.myCreatedListingsHub ?: flowOf(emptyList())
     }
     val rawListings by hubFlow.collectAsState(initial = emptyList())
+    val sectionAnchor = remember(initialSection) { parseMyPublishedSectionAnchor(initialSection) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var gridMode by rememberSaveable { mutableStateOf(false) }
     var unpublishTargetId by remember { mutableStateOf<String?>(null) }
     var deleteRecordStep1Id by remember { mutableStateOf<String?>(null) }
     var deleteRecordStep2Id by remember { mutableStateOf<String?>(null) }
+    var consumedInitialSection by rememberSaveable(initialSection) { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
 
     val q = searchQuery.trim()
     val filtered = remember(rawListings, q) {
@@ -112,6 +166,29 @@ fun MyPublishedServicesScreen(navController: NavController) {
     val published = remember(filtered) { filtered.filter { !it.isDeleted && !it.isDraft } }
     val drafts = remember(filtered) { filtered.filter { !it.isDeleted && it.isDraft } }
     val cancelled = remember(filtered) { filtered.filter { it.isDeleted } }
+
+    LaunchedEffect(sectionAnchor, gridMode, published.size, drafts.size, consumedInitialSection) {
+        if (consumedInitialSection || sectionAnchor == MyPublishedSectionAnchor.PUBLISHED) return@LaunchedEffect
+
+        if (gridMode) {
+            gridState.scrollToItem(
+                index = gridSectionTitleIndex(
+                    anchor = sectionAnchor,
+                    publishedCount = published.size,
+                    draftCount = drafts.size
+                )
+            )
+        } else {
+            listState.scrollToItem(
+                index = listSectionTitleIndex(
+                    anchor = sectionAnchor,
+                    publishedCount = published.size,
+                    draftCount = drafts.size
+                )
+            )
+        }
+        consumedInitialSection = true
+    }
 
     Scaffold(
         containerColor = PageBg,
@@ -133,6 +210,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                state = gridState,
                 contentPadding = PaddingValues(
                     start = HorizontalInset,
                     end = HorizontalInset,
@@ -263,6 +341,7 @@ fun MyPublishedServicesScreen(navController: NavController) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                state = listState,
                 contentPadding = PaddingValues(
                     start = HorizontalInset,
                     end = HorizontalInset,

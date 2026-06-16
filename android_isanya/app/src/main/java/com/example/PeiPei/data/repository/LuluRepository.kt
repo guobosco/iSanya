@@ -27,6 +27,7 @@ import com.example.Lulu.data.model.HostIncomingOrder
 import com.example.Lulu.data.model.Service
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.ServiceDeclarations
+import com.example.Lulu.data.model.ServicePublishTaxonomy
 import com.example.Lulu.data.model.User
 import com.example.Lulu.data.remote.ApiService
 import com.example.Lulu.data.remote.AuthSession
@@ -1159,6 +1160,8 @@ class LuluRepository(
             prepaymentPercent = prepaymentPercent.coerceIn(0, 100),
             fullRefundCancelLeadDays = fullRefundCancelLeadDays.coerceIn(0, 10),
             serviceDeclarationsExtra = ServiceDeclarations.normalizeExtra(serviceDeclarationsExtra),
+            serviceFeatureTags = ServicePublishTaxonomy.normalizeFeatureTags(category, serviceFeatureTags),
+            serviceExtraFeeTags = ServicePublishTaxonomy.normalizeExtraFeeTags(category, serviceExtraFeeTags),
         )
 
     companion object {

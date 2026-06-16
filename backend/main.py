@@ -25,6 +25,10 @@ try:
 except ImportError:
     from schema_sync import sync_sqlite_schema
 try:
+    from .seed_data import ensure_seed_data
+except ImportError:
+    from seed_data import ensure_seed_data
+try:
     from .chat_realtime import ChatRealtimeHub
 except ImportError:
     from chat_realtime import ChatRealtimeHub
@@ -433,6 +437,12 @@ def hydrate_user_profile_metrics(db: Session, user: models.User):
     return user
 
 
+def can_view_service(item: models.Service, viewer: Optional[models.User]) -> bool:
+    if item.is_deleted or item.is_draft:
+        return viewer is not None and viewer.id == item.creator_id
+    return True
+
+
 def user_schema_for_viewer(db: Session, orm_user: models.User, viewer_id: str) -> schemas.User:
     """
     将 ORM 用户转为响应 Schema；对他人且开启身高体重隐私时，抹掉具体数值（仍保留 privacy 标记供客户端展示「已隐藏」）。
@@ -539,6 +549,8 @@ def get_or_create_direct_conversation(db: Session, current_user: models.User, pe
 # 如果表已存在，不会重新创建
 models.Base.metadata.create_all(bind=engine)
 sync_sqlite_schema(engine, models.Base.metadata)
+with SessionLocal() as seed_db:
+    ensure_seed_data(seed_db)
 
 app = FastAPI()
 
@@ -888,9 +900,7 @@ def read_services(
     current_user: models.User = Depends(get_current_user)
 ):
     owner_id = ensure_optional_self_access(current_user, user_id)
-    query = db.query(models.Service).filter(models.Service.is_deleted == False)
-    if owner_id:
-        query = query.filter(models.Service.creator_id == owner_id)
+    query = db.query(models.Service).filter(models.Service.creator_id == owner_id)
     return query.order_by(desc(models.Service.updated_at), desc(models.Service.created_at)).offset(skip).limit(limit).all()
 
 
@@ -907,7 +917,10 @@ def list_square_discovery_services(
     不强制登录：客户端冷启动本地 demo 用户尚未拿 token 时也能拉首屏；本接口不按用户过滤。
     必须声明在 /services/{service_id} 之前，避免 path 将 discovery 解析为 id。
     """
-    query = db.query(models.Service).filter(models.Service.is_deleted == False)
+    query = db.query(models.Service).filter(
+        models.Service.is_deleted == False,
+        models.Service.is_draft == False
+    )
     if updated_after is not None:
         query = query.filter(models.Service.updated_at > updated_after)
     items = (
@@ -925,11 +938,10 @@ def read_service_detail(
     db: Session = Depends(get_db),
     current_user: Optional[models.User] = Depends(get_optional_current_user)
 ):
-    db_item = db.query(models.Service).filter(
-        models.Service.id == service_id,
-        models.Service.is_deleted == False
-    ).first()
+    db_item = db.query(models.Service).filter(models.Service.id == service_id).first()
     if db_item is None:
+        raise HTTPException(status_code=404, detail="Service not found")
+    if not can_view_service(db_item, current_user):
         raise HTTPException(status_code=404, detail="Service not found")
     return db_item
 

@@ -264,8 +264,20 @@ fun AppNavHost(intentState: Intent? = null) {
             val userId = backStackEntry.arguments?.getString("userId")?.trim()?.takeIf { it.isNotEmpty() }
             ServiceHostProfileScreen(navController = navController, userId = userId)
         }
-        composable(Screen.MyPublishedServices.route) {
-            MyPublishedServicesScreen(navController = navController)
+        composable(
+            route = Screen.MyPublishedServices.route,
+            arguments = listOf(
+                navArgument("initialSection") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { entry ->
+            MyPublishedServicesScreen(
+                navController = navController,
+                initialSection = entry.arguments?.getString("initialSection")
+            )
         }
         composable(Screen.MyHostIncomingOrders.route) {
             MyHostIncomingOrdersScreen(navController = navController)
@@ -458,7 +470,17 @@ sealed class Screen(val route: String) {
     object ServiceHostProfile : Screen("service_host_profile/{userId}") {
         fun createRoute(userId: String) = "service_host_profile/$userId"
     }
-    object MyPublishedServices : Screen("my_published_services")
+    object MyPublishedServices : Screen("my_published_services?initialSection={initialSection}") {
+        const val baseRoute = "my_published_services"
+
+        fun createRoute(initialSection: String? = null): String {
+            return if (initialSection.isNullOrBlank()) {
+                baseRoute
+            } else {
+                "$baseRoute?initialSection=${android.net.Uri.encode(initialSection)}"
+            }
+        }
+    }
     object MyHostIncomingOrders : Screen("my_host_incoming_orders")
     object PublishedServiceCalendar : Screen("published_service_calendar/{serviceId}") {
         fun createRoute(serviceId: String) = "published_service_calendar/$serviceId"

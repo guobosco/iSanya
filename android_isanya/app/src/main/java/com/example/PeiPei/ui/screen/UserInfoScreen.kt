@@ -559,7 +559,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                     onClick = {
                         if (!isLoggedIn) navigateToLogin()
                         else {
-                            navController.navigate(Screen.MyPublishedServices.route) {
+                            navController.navigate(Screen.MyPublishedServices.createRoute()) {
                                 launchSingleTop = true
                             }
                         }
