@@ -640,13 +640,6 @@ function ServiceDetailPage() {
               )}
             </View>
 
-            <View className={styles.bookingSection}>
-              <Text className={styles.bookingSectionTitle}>额外费用说明</Text>
-              <View className={styles.bookingInfoCard}>
-                <Text className={styles.bookingInfoText}>{service.extraFeeDescription}</Text>
-              </View>
-            </View>
-
             <View
               className={styles.bookingConfirmButton}
               onClick={handleBookingConfirm}

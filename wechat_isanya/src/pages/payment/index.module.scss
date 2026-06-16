@@ -1,0 +1,242 @@
+.page {
+  min-height: 100vh;
+  background: #f7f7f7;
+  padding: calc(env(safe-area-inset-top) + 18rpx) 28rpx calc(176rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28rpx;
+}
+
+.backButton,
+.headerPlaceholder {
+  width: 72rpx;
+  height: 72rpx;
+  flex-shrink: 0;
+}
+
+.backButton {
+  border-radius: 36rpx;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.backButtonText {
+  color: #222222;
+  font-size: 42rpx;
+  line-height: 42rpx;
+  font-weight: 600;
+}
+
+.headerTitle {
+  color: #111111;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 48rpx;
+}
+
+.section {
+  margin-top: 24rpx;
+}
+
+.sectionTitle {
+  display: block;
+  margin-bottom: 18rpx;
+  color: #151515;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 42rpx;
+}
+
+.summaryCard,
+.noticeCard {
+  border-radius: 32rpx;
+  background: #ffffff;
+  padding: 28rpx 26rpx;
+  box-shadow: 0 10rpx 32rpx rgba(0, 0, 0, 0.04);
+}
+
+.summaryRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+
+.summaryRow + .summaryRow {
+  margin-top: 22rpx;
+}
+
+.summaryLabel {
+  color: #8a8a8a;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.summaryValue {
+  flex: 1;
+  color: #222222;
+  font-size: 26rpx;
+  line-height: 38rpx;
+  text-align: right;
+}
+
+.methodList {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.methodCard {
+  border-radius: 32rpx;
+  border: 2rpx solid transparent;
+  background: #ffffff;
+  padding: 28rpx 26rpx;
+  box-shadow: 0 10rpx 32rpx rgba(0, 0, 0, 0.04);
+}
+
+.methodCardActive {
+  border-color: rgba(224, 17, 95, 0.24);
+  background: #fff7fa;
+}
+
+.methodMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.methodTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.methodTitle {
+  color: #1b1b1b;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 40rpx;
+}
+
+.methodBadge {
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(224, 17, 95, 0.12);
+  color: #c81053;
+  font-size: 20rpx;
+  line-height: 28rpx;
+}
+
+.methodSubtitle {
+  display: block;
+  margin-top: 8rpx;
+  color: #7d7d7d;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.methodRadio {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 18rpx;
+  border: 2rpx solid #d6d6d6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.methodRadioActive {
+  border-color: #e0115f;
+}
+
+.methodRadioDot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 9rpx;
+  background: #e0115f;
+}
+
+.noticeText {
+  display: block;
+  color: #555555;
+  font-size: 25rpx;
+  line-height: 38rpx;
+}
+
+.noticeText + .noticeText {
+  margin-top: 10rpx;
+}
+
+.bottomSpacer {
+  height: 32rpx;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 22rpx 28rpx calc(22rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 -8rpx 30rpx rgba(0, 0, 0, 0.06);
+}
+
+.amountWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.amountLabel {
+  display: block;
+  color: #7c7c7c;
+  font-size: 22rpx;
+  line-height: 30rpx;
+}
+
+.amountValue {
+  display: block;
+  margin-top: 8rpx;
+  color: #111111;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 54rpx;
+}
+
+.amountMeta {
+  display: block;
+  margin-top: 8rpx;
+  color: #7c7c7c;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.payButton {
+  width: 260rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.payButtonText {
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 42rpx;
+}
