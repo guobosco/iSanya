@@ -28,7 +28,7 @@ import com.example.Lulu.data.model.User
         ChatConversationMember::class,
         ChatMessage::class
     ],
-    version = 59,
+    version = 60,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -109,6 +109,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_59_60 = object : Migration(59, 60) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE users ADD COLUMN profileImageUrls TEXT NOT NULL DEFAULT '[]'"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val existing = INSTANCE
@@ -129,6 +137,7 @@ abstract class AppDatabase : RoomDatabase() {
                     MIGRATION_56_57,
                     MIGRATION_57_58,
                     MIGRATION_58_59,
+                    MIGRATION_59_60,
                 )
                 .fallbackToDestructiveMigration() // 开发阶段允许破坏性迁移
                 .build()

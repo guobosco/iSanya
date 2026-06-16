@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.R
 import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.withAvatarIncludedInPhotoWall
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.ui.navigation.Screen
 import com.google.zxing.BarcodeFormat
@@ -166,10 +167,8 @@ fun MyQrCodeScreen(navController: NavController) {
                         Toast.makeText(context, "正在上传头像...", Toast.LENGTH_SHORT).show()
                         val serverUrl = com.example.Lulu.util.AvatarUploadUtil.processAndUploadAvatar(context, croppedUri, repository)
                         if (serverUrl != null) {
-                            val updatedUser = AppDataStore.currentUser.value.copy(
-                                photoUrl = serverUrl,
-                                updatedAt = System.currentTimeMillis()
-                            )
+                            val updatedUser = AppDataStore.currentUser.value
+                                .withAvatarIncludedInPhotoWall(serverUrl)
                             val result = repository.syncCurrentUserProfile(updatedUser)
                             result.onSuccess { savedUser ->
                                 AppDataStore.replaceCurrentUser(savedUser)

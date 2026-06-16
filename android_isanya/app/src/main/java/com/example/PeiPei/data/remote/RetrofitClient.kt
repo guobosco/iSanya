@@ -118,6 +118,7 @@ object RetrofitClient {
                     }
                     ensureArray("tags")
                     ensureArray("favorite_service_ids")
+                    ensureArray("profile_image_urls")
                     ensureArray("spoken_languages")
                     ensureArray("review_summaries")
                     val pei = o.get("pei_pei_id")

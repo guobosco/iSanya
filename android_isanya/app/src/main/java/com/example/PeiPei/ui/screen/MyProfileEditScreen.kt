@@ -40,7 +40,9 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.navigation.NavController
 import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.MAX_PROFILE_WALL_IMAGE_COUNT
 import com.example.Lulu.data.model.heightWeightEditRowValue
+import com.example.Lulu.data.model.withAvatarIncludedInPhotoWall
 import com.example.Lulu.ui.components.ProfileHeightWeightBottomSheet
 import com.example.Lulu.ui.components.ProfileInterestsPickerDialog
 import com.example.Lulu.ui.components.ProfileItem
@@ -130,6 +132,7 @@ private fun MyProfileEditContent(
     var showInterestsPicker by remember { mutableStateOf(false) }
     var profileEditTab by remember { mutableIntStateOf(0) }
     var isAvatarSaving by remember { mutableStateOf(false) }
+    var isPhotoWallUploading by remember { mutableStateOf(false) }
     var isProfileSyncing by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     
@@ -175,10 +178,8 @@ private fun MyProfileEditContent(
                         Toast.makeText(context, "正在上传头像...", Toast.LENGTH_SHORT).show()
                         val serverUrl = com.example.Lulu.util.AvatarUploadUtil.processAndUploadAvatar(context, croppedUri, repository)
                         if (serverUrl != null) {
-                            val updatedUser = AppDataStore.currentUser.value.copy(
-                                photoUrl = serverUrl,
-                                updatedAt = System.currentTimeMillis()
-                            )
+                            val updatedUser = AppDataStore.currentUser.value
+                                .withAvatarIncludedInPhotoWall(serverUrl)
                             val result = repository.syncCurrentUserProfile(updatedUser)
                             result.onSuccess { savedUser ->
                                 AppDataStore.replaceCurrentUser(savedUser)
@@ -207,6 +208,85 @@ private fun MyProfileEditContent(
         }
     }
 
+    val photoWallLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        coroutineScope.launch {
+            val repository = AppDataStore.getRepository()
+            if (repository == null) {
+                Toast.makeText(context, "初始化错误，无法上传", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            val currentUrls = AppDataStore.currentUser.value.profileImageUrls
+            val remainingCount = MAX_PROFILE_WALL_IMAGE_COUNT - currentUrls.size
+            if (remainingCount <= 0) {
+                Toast.makeText(
+                    context,
+                    "照片墙最多上传 $MAX_PROFILE_WALL_IMAGE_COUNT 张",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            val pendingUris = uris.distinct().take(remainingCount)
+            if (pendingUris.size < uris.distinct().size) {
+                Toast.makeText(
+                    context,
+                    "最多再添加 $remainingCount 张照片",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            isPhotoWallUploading = true
+            try {
+                Toast.makeText(context, "正在上传照片墙...", Toast.LENGTH_SHORT).show()
+                val uploadedUrls = mutableListOf<String>()
+                pendingUris.forEach { uri ->
+                    val serverUrl =
+                        com.example.Lulu.util.AvatarUploadUtil.processAndUploadProfilePhoto(
+                            context = context,
+                            uri = uri,
+                            repository = repository
+                        )
+                    if (!serverUrl.isNullOrBlank()) {
+                        uploadedUrls += serverUrl
+                    }
+                }
+                if (uploadedUrls.isEmpty()) {
+                    Toast.makeText(context, "照片上传失败，请重试", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                val latest = AppDataStore.currentUser.value
+                val mergedUrls = (latest.profileImageUrls + uploadedUrls)
+                    .distinct()
+                    .take(MAX_PROFILE_WALL_IMAGE_COUNT)
+                val updatedUser = latest.copy(
+                    profileImageUrls = mergedUrls,
+                    updatedAt = System.currentTimeMillis()
+                )
+                val result = repository.syncCurrentUserProfile(updatedUser)
+                result.onSuccess { savedUser ->
+                    AppDataStore.replaceCurrentUser(savedUser)
+                    val successCount = uploadedUrls.size.coerceAtMost(
+                        savedUser.profileImageUrls.size - currentUrls.size
+                    )
+                    Toast.makeText(
+                        context,
+                        "已添加 ${successCount.coerceAtLeast(1)} 张照片",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }.onFailure { error ->
+                    Toast.makeText(
+                        context,
+                        error.message ?: "照片墙保存失败，请重试",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } finally {
+                isPhotoWallUploading = false
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -217,7 +297,7 @@ private fun MyProfileEditContent(
                             dismissKeyboard()
                             onClose()
                         },
-                        enabled = !isProfileSyncing && !isAvatarSaving
+                        enabled = !isProfileSyncing && !isAvatarSaving && !isPhotoWallUploading
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "关闭")
                     }
@@ -269,11 +349,11 @@ private fun MyProfileEditContent(
                         .padding(horizontal = 24.dp, vertical = 12.dp)
                         .height(52.dp),
                     shape = RoundedCornerShape(10.dp),
-                    enabled = !isProfileSyncing && !isAvatarSaving,
+                    enabled = !isProfileSyncing && !isAvatarSaving && !isPhotoWallUploading,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF222222))
                 ) {
                     Text(
-                        if (isProfileSyncing) "保存中…" else "完成",
+                        if (isProfileSyncing || isPhotoWallUploading) "保存中…" else "完成",
                         color = Color.White,
                         fontSize = 18.sp
                     )
@@ -318,14 +398,6 @@ private fun MyProfileEditContent(
                     },
                     text = { Text("工作与成长", fontSize = 14.sp, maxLines = 1) }
                 )
-                Tab(
-                    selected = profileEditTab == 2,
-                    onClick = {
-                        dismissKeyboard()
-                        profileEditTab = 2
-                    },
-                    text = { Text("关于我", fontSize = 14.sp, maxLines = 1) }
-                )
             }
 
             Column(
@@ -340,14 +412,14 @@ private fun MyProfileEditContent(
                     0 -> {
                         ProfileEditTabIntroBlock(
                             title = "基本资料",
-                            body = "完善头像与基本信息，让社区里的朋友更了解你。"
+                            body = "完善头像、基本信息和自我介绍，让社区里的朋友更了解你。"
                         )
                         Spacer(modifier = Modifier.height(18.dp))
                         Box(
                             contentAlignment = Alignment.BottomEnd,
                             modifier = Modifier
                                 .size(168.dp)
-                                .clickable(enabled = !isAvatarSaving) {
+                                .clickable(enabled = !isAvatarSaving && !isPhotoWallUploading) {
                                     avatarLauncher.launch("image/*")
                                 }
                         ) {
@@ -444,6 +516,38 @@ private fun MyProfileEditContent(
                                 onClick = { showPhoneDialog = true }
                             )
                         }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        AboutMeSectionCard(
+                            signature = user.signature,
+                            signatureLength = user.signature.length,
+                            photoUrls = user.profileImageUrls,
+                            maxPhotoCount = MAX_PROFILE_WALL_IMAGE_COUNT,
+                            isUploading = isPhotoWallUploading,
+                            onUploadClick = { photoWallLauncher.launch("image/*") },
+                            onRemovePhoto = { photoUrl ->
+                                val latest = AppDataStore.currentUser.value
+                                AppDataStore.updateCurrentUser(
+                                    latest.copy(
+                                        profileImageUrls = latest.profileImageUrls.filterNot { it == photoUrl },
+                                        updatedAt = System.currentTimeMillis()
+                                    )
+                                )
+                            },
+                            onSignatureChange = { new ->
+                                if (new.length <= 500) {
+                                    val latest = AppDataStore.currentUser.value
+                                    AppDataStore.updateCurrentUser(
+                                        latest.copy(signature = new, updatedAt = System.currentTimeMillis())
+                                    )
+                                }
+                            },
+                            onDone = dismissKeyboard
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        InterestSectionCard(
+                            tags = user.tags,
+                            onEditClick = { showInterestsPicker = true }
+                        )
                     }
                     1 -> {
                         ProfileEditTabIntroBlock(
@@ -491,130 +595,6 @@ private fun MyProfileEditContent(
                                 showArrow = true,
                                 onClick = { showMiddleSchoolSongDialog = true }
                             )
-                        }
-                    }
-                    else -> {
-                        ProfileEditTabIntroBlock(
-                            title = "关于我",
-                            body = "用简介和兴趣介绍自己，更容易遇到志同道合的人。"
-                        )
-                        Spacer(modifier = Modifier.height(18.dp))
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                            ) {
-                                Text(
-                                    "个人简介",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.height(14.dp))
-                                OutlinedTextField(
-                                    value = user.signature,
-                                    onValueChange = { new: String ->
-                                        if (new.length <= 500) {
-                                            val latest = AppDataStore.currentUser.value
-                                            AppDataStore.updateCurrentUser(
-                                                latest.copy(signature = new, updatedAt = System.currentTimeMillis())
-                                            )
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .defaultMinSize(minHeight = 140.dp),
-                                    minLines = 5,
-                                    maxLines = 12,
-                                    singleLine = false,
-                                    placeholder = {
-                                        Text(
-                                            "例如性格、爱好、日常或想认识的朋友类型…",
-                                            fontSize = 14.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    },
-                                    supportingText = {
-                                        Text(
-                                            "${user.signature.length}/500",
-                                            modifier = Modifier.fillMaxWidth(),
-                                            textAlign = TextAlign.End,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    },
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                    keyboardActions = KeyboardActions(onDone = { dismissKeyboard() }),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedContainerColor = Color.White,
-                                        unfocusedContainerColor = Color.White,
-                                        disabledContainerColor = Color.White
-                                    )
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                            ) {
-                                Text("我的兴趣爱好", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                Spacer(modifier = Modifier.height(14.dp))
-                                val interestPresets = remember { defaultProfileInterestPresets() }
-                                val orderedTags = interestPresets.map { it.label }.filter { user.tags.contains(it) } +
-                                    user.tags.filter { t -> interestPresets.none { it.label == t } }
-                                if (orderedTags.isEmpty()) {
-                                    Text(
-                                        "尚未添加兴趣，点下方按钮选择。",
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                } else {
-                                    FlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        orderedTags.forEach { tag ->
-                                            Surface(
-                                                shape = RoundedCornerShape(999.dp),
-                                                color = Color.White,
-                                                border = BorderStroke(1.dp, Color(0xFFE5E5E5))
-                                            ) {
-                                                Text(
-                                                    text = tag,
-                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                                    fontSize = 13.sp,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                OutlinedButton(
-                                    onClick = { showInterestsPicker = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp)
-                                ) {
-                                    Text(
-                                        if (user.tags.isEmpty()) "添加兴趣爱好" else "编辑兴趣爱好",
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -869,6 +849,270 @@ private fun ProfileEditTabIntroBlock(
                     textDecoration = TextDecoration.Underline
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AboutMeSectionCard(
+    signature: String,
+    signatureLength: Int,
+    photoUrls: List<String>,
+    maxPhotoCount: Int,
+    isUploading: Boolean,
+    onUploadClick: () -> Unit,
+    onRemovePhoto: (String) -> Unit,
+    onSignatureChange: (String) -> Unit,
+    onDone: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                "关于我",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "用照片、简介介绍自己，更容易遇到志同道合的人。",
+                fontSize = 13.sp,
+                lineHeight = 20.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "照片墙",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                "最多上传 $maxPhotoCount 张资料照片",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                photoUrls.forEach { photoUrl ->
+                    ProfilePhotoWallItem(
+                        photoUrl = photoUrl,
+                        onRemove = { onRemovePhoto(photoUrl) }
+                    )
+                }
+                if (photoUrls.size < maxPhotoCount) {
+                    AddPhotoWallItem(
+                        enabled = !isUploading,
+                        onClick = onUploadClick
+                    )
+                }
+            }
+            if (photoUrls.isEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "还没有上传资料照片，添加几张更容易让别人了解你。",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                "个人简介",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = signature,
+                onValueChange = onSignatureChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .defaultMinSize(minHeight = 140.dp),
+                minLines = 5,
+                maxLines = 12,
+                singleLine = false,
+                placeholder = {
+                    Text(
+                        "例如性格、爱好、日常或想认识的朋友类型…",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                supportingText = {
+                    Text(
+                        "$signatureLength/500",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onDone() }),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    disabledContainerColor = Color.White
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun InterestSectionCard(
+    tags: List<String>,
+    onEditClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 16.dp)
+        ) {
+            Text(
+                "我的兴趣爱好",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            val interestPresets = remember { defaultProfileInterestPresets() }
+            val orderedTags = interestPresets.map { it.label }.filter { tags.contains(it) } +
+                tags.filter { tag -> interestPresets.none { it.label == tag } }
+            if (orderedTags.isEmpty()) {
+                Text(
+                    "尚未添加兴趣，点下方按钮选择。",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    orderedTags.forEach { tag ->
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = Color.White,
+                            border = BorderStroke(1.dp, Color(0xFFE5E5E5))
+                        ) {
+                            Text(
+                                text = tag,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onEditClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    if (tags.isEmpty()) "添加兴趣爱好" else "编辑兴趣爱好",
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfilePhotoWallItem(
+    photoUrl: String,
+    onRemove: () -> Unit
+) {
+    Box(
+        modifier = Modifier.size(100.dp)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            AsyncImage(
+                model = RetrofitClient.normalizeBackendMediaUrlForDisplay(photoUrl),
+                contentDescription = "资料照片",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(22.dp)
+                .clickable(onClick = onRemove),
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.55f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "删除照片",
+                    tint = Color.White,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddPhotoWallItem(
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .size(100.dp)
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.CameraAlt,
+                contentDescription = "添加照片",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = if (enabled) "上传照片" else "上传中",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

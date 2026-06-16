@@ -5,7 +5,7 @@ from sqlalchemy.exc import OperationalError
 
 
 JSON_LIST_DEFAULTS = {
-    "users": {"tags", "favorite_service_ids"},
+    "users": {"tags", "favorite_service_ids", "profile_image_urls"},
     "services": {"image_urls", "participant_ids", "service_declarations_extra"},
     "experiences": {"image_urls", "tags"},
 }

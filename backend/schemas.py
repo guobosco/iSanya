@@ -16,6 +16,7 @@ class UserBase(BaseModel):
     phone_number: Optional[str] = None
     pei_pei_id: Optional[str] = None
     photo_url: str = ""
+    profile_image_urls: List[str] = Field(default_factory=list)
     remark_name: str = ""
     tags: List[str] = Field(default_factory=list)
     favorite_service_ids: List[str] = Field(default_factory=list)
@@ -46,7 +47,14 @@ class UserBase(BaseModel):
     id_modification_count: int = 0
     last_id_modification_year: int = 0
 
-    @field_validator("tags", "favorite_service_ids", "spoken_languages", "review_summaries", mode="before")
+    @field_validator(
+        "tags",
+        "favorite_service_ids",
+        "profile_image_urls",
+        "spoken_languages",
+        "review_summaries",
+        mode="before"
+    )
     @classmethod
     def normalize_list_fields(cls, value):
         """ORM JSON 列可能为 NULL；缺省则 Pydantic 校验失败并导致 /users/{id} 500，客户端 Gson 再失败。"""

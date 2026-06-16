@@ -356,16 +356,41 @@
   flex-shrink: 0;
 }
 
-.noteText,
-.locationText {
+.noteText {
   color: #4b4b4b;
   font-size: 26rpx;
   line-height: 40rpx;
 }
 
-.locationText {
+.serviceTypeDesc {
   display: block;
   margin-top: 18rpx;
+  color: #4b4b4b;
+  font-size: 26rpx;
+  line-height: 42rpx;
+}
+
+.keywordWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  margin-top: 20rpx;
+}
+
+.keywordChip {
+  min-height: 64rpx;
+  padding: 0 22rpx;
+  border-radius: 32rpx;
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keywordChipText {
+  color: #333333;
+  font-size: 24rpx;
+  line-height: 32rpx;
 }
 
 .reviewList {
@@ -463,5 +488,141 @@
 .bookButtonText {
   color: #ffffff;
   font-size: 32rpx;
+  font-weight: 600;
+}
+
+.bookingSheetMask {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: flex-end;
+}
+
+.bookingSheet {
+  width: 100%;
+  max-height: 84vh;
+  border-radius: 40rpx 40rpx 0 0;
+  background: #ffffff;
+  padding: 36rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.bookingSheetHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+
+.bookingSheetTitle {
+  display: block;
+  color: #111111;
+  font-size: 42rpx;
+  font-weight: 700;
+  line-height: 56rpx;
+}
+
+.bookingSheetSubtitle {
+  display: block;
+  margin-top: 8rpx;
+  color: #666666;
+  font-size: 24rpx;
+  line-height: 34rpx;
+}
+
+.bookingSheetClose {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bookingSheetCloseText {
+  color: #222222;
+  font-size: 40rpx;
+  line-height: 40rpx;
+}
+
+.bookingSection {
+  margin-top: 28rpx;
+}
+
+.bookingSectionTitle {
+  display: block;
+  color: #141414;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 44rpx;
+}
+
+.bookingPickerList {
+  margin-top: 18rpx;
+  border-radius: 28rpx;
+  overflow: hidden;
+  border: 2rpx solid #eeeeee;
+  background: #fbfbfb;
+}
+
+.bookingPickerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+  padding: 26rpx 24rpx;
+  border-bottom: 2rpx solid #eeeeee;
+}
+
+.bookingPickerList :last-child .bookingPickerRow {
+  border-bottom: none;
+}
+
+.bookingPickerLabel {
+  color: #1b1b1b;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 38rpx;
+}
+
+.bookingPickerValue {
+  color: #7a7a7a;
+  font-size: 25rpx;
+  line-height: 34rpx;
+}
+
+.bookingInfoCard {
+  margin-top: 18rpx;
+  border-radius: 28rpx;
+  border: 2rpx solid #eeeeee;
+  background: #fbfbfb;
+  padding: 26rpx 24rpx;
+}
+
+.bookingInfoText {
+  color: #7a7a7a;
+  font-size: 25rpx;
+  line-height: 38rpx;
+  white-space: pre-line;
+}
+
+.bookingConfirmButton {
+  margin-top: 36rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: #111111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bookingConfirmButtonText {
+  color: #ffffff;
+  font-size: 30rpx;
   font-weight: 600;
 }

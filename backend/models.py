@@ -29,6 +29,8 @@ class User(Base):
     # --- 个人资料 (Profile Info) ---
     # 头像 URL
     photo_url = Column(String, nullable=True)
+    # 资料照片墙
+    profile_image_urls = Column(JSON, default=[])
     # 备注名
     remark_name = Column(String, default="")
     # 标签列表，存储为 JSON 数组

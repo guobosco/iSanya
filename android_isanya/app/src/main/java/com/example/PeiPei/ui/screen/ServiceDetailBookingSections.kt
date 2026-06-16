@@ -5,6 +5,8 @@ package com.example.Lulu.ui.screen
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,10 +68,8 @@ import androidx.compose.ui.unit.sp
 import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.HostCalendarDayClosure
 import com.example.Lulu.data.model.Service
-import com.example.Lulu.ui.components.ServiceAreaReadOnlyMapCard
 import com.example.Lulu.ui.theme.DialogTitleTopPadding
 import com.example.Lulu.util.BookingTimeRangesCodec
-import com.example.Lulu.util.ServiceLocationPolygonCodec
 import com.example.Lulu.util.decodePublishPriceTiers
 import com.example.Lulu.util.priceBasisTextForUiDisplay
 import java.time.Instant
@@ -241,9 +241,8 @@ private val SectionBlockVerticalGap = 20.dp
 /** 预定须知每条行的上下内边距 */
 private val BookingPolicyRowVerticalPadding = 18.dp
 
-/** 服务详情页「服务区域」副标题（与产品稿一致） */
-private const val ServiceDetailServiceAreaSubtitle =
-    "在地图标注区域内，我可以前往客人指定的地点的。如果需要我在其他地点提供服务，请给我发消息。"
+private const val ServiceDetailServiceTypeFallback =
+    "服务内容、提供方式与计费规则请与主理人沟通确认。"
 
 @Composable
 private fun ServiceIntroExpandableText(fullDescription: String) {
@@ -356,6 +355,49 @@ private fun ServiceDetailChevronRow(
             tint = ChevronTint,
             modifier = Modifier.size(14.dp),
         )
+    }
+}
+
+@Composable
+private fun ServiceDetailInfoCard(text: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFFAFAFA),
+        border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
+    ) {
+        Text(
+            text = text,
+            color = RowSubtitleColor,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ServiceTypeKeywordTags(tags: List<String>) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        tags.forEach { tag ->
+            Surface(
+                shape = RoundedCornerShape(999.dp),
+                color = Color(0xFFF7F7F7),
+            ) {
+                Text(
+                    text = tag,
+                    color = Color(0xFF333333),
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+        }
     }
 }
 
@@ -621,8 +663,10 @@ fun ServiceDetailBookingPolicySections(
     scheduleHostCalendarServiceId: String? = null,
     serviceDeclarationsSubtitle: String,
     serviceDeclarationsReaderBody: String,
-    /** 非 null 时在「服务介绍」与「方案选择」之间展示「服务区域」（含地图）；体验详情等场景传 null 跳过。 */
-    serviceAreaLocationRaw: String? = null,
+    extraFeeDescription: String? = null,
+    serviceTypeDescription: String? = null,
+    serviceTypeKeywords: List<String> = emptyList(),
+    showBookingSelectionInline: Boolean = true,
 ) {
     var showContentSheet by remember { mutableStateOf(false) }
     var showScheduleSheet by remember { mutableStateOf(false) }
@@ -655,26 +699,48 @@ fun ServiceDetailBookingPolicySections(
             color = DetailScreenTagDividerColor,
         )
         Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
-        if (serviceAreaLocationRaw != null) {
-            ServiceDetailSectionHeader(title = "服务区域")
+        if (!serviceTypeDescription.isNullOrBlank() || serviceTypeKeywords.isNotEmpty()) {
+            ServiceDetailSectionHeader(title = "服务类型说明")
             Text(
-                text = ServiceDetailServiceAreaSubtitle,
+                text = serviceTypeDescription?.ifBlank { ServiceDetailServiceTypeFallback }
+                    ?: ServiceDetailServiceTypeFallback,
                 color = RowSubtitleColor,
                 fontSize = 13.sp,
-                lineHeight = 18.sp,
+                lineHeight = 20.sp,
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.fillMaxWidth(),
             )
-            val hasServiceAreaPolygon = remember(serviceAreaLocationRaw) {
-                (ServiceLocationPolygonCodec.decodePolygonLatLng(serviceAreaLocationRaw)?.size ?: 0) >= 3
-            }
-            if (hasServiceAreaPolygon) {
+            if (serviceTypeKeywords.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(12.dp))
-                ServiceAreaReadOnlyMapCard(
-                    encodedLocation = serviceAreaLocationRaw,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(228.dp),
+                ServiceTypeKeywordTags(tags = serviceTypeKeywords)
+            }
+            Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 1.dp,
+                color = DetailScreenTagDividerColor,
+            )
+            Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
+        }
+        if (showBookingSelectionInline) {
+            ServiceDetailSectionHeader(contentSectionTitle)
+            ServiceDetailChevronRow(
+                icon = Icons.Outlined.Apps,
+                title = "当前选择",
+                subtitle = "${picked.label} · ${picked.subtitle}",
+                onClick = { showContentSheet = true },
+            )
+            Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
+            if (!extraFeeDescription.isNullOrBlank()) {
+                ServiceDetailSectionHeader("额外费用说明")
+                ServiceDetailInfoCard(text = extraFeeDescription)
+            } else {
+                ServiceDetailSectionHeader("时间选择")
+                ServiceDetailChevronRow(
+                    icon = Icons.Outlined.DateRange,
+                    title = "期望开始时间",
+                    subtitle = scheduleMillis?.let(::formatScheduleSlotDisplay) ?: "请选择日期与时间",
+                    onClick = { showScheduleSheet = true },
                 )
             }
             Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
@@ -685,28 +751,6 @@ fun ServiceDetailBookingPolicySections(
             )
             Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
         }
-        ServiceDetailSectionHeader(contentSectionTitle)
-        ServiceDetailChevronRow(
-            icon = Icons.Outlined.Apps,
-            title = "当前选择",
-            subtitle = "${picked.label} · ${picked.subtitle}",
-            onClick = { showContentSheet = true },
-        )
-        Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
-        ServiceDetailSectionHeader("时间选择")
-        ServiceDetailChevronRow(
-            icon = Icons.Outlined.DateRange,
-            title = "期望开始时间",
-            subtitle = scheduleMillis?.let(::formatScheduleSlotDisplay) ?: "请选择日期与时间",
-            onClick = { showScheduleSheet = true },
-        )
-        Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
-        HorizontalDivider(
-            modifier = Modifier.fillMaxWidth(),
-            thickness = 1.dp,
-            color = DetailScreenTagDividerColor,
-        )
-        Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
         ServiceDetailSectionHeader(bookingSectionTitle)
         ServiceDetailChevronRow(
             icon = Icons.Outlined.EventBusy,
@@ -879,6 +923,203 @@ fun ServiceDetailBookingPolicySections(
                     Text("关闭")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ServiceBookingSelectionSheet(
+    contentOptions: List<ServiceContentPickOption>,
+    selectedContentIndex: Int,
+    onSelectedContentIndex: (Int) -> Unit,
+    scheduleMillis: Long?,
+    onScheduleMillisChange: (Long?) -> Unit,
+    scheduleAllowedWeekdays: Set<Int>? = null,
+    scheduleBookingTimeRangesJson: String = "",
+    scheduleBookingLeadHours: Float = BookingTimeRangesCodec.DEFAULT_BOOKING_LEAD_HOURS,
+    scheduleBookingFutureOpenDays: Int = BookingTimeRangesCodec.DEFAULT_BOOKING_FUTURE_OPEN_DAYS,
+    scheduleHostCalendarServiceId: String? = null,
+    extraFeeDescription: String? = null,
+    onDismiss: () -> Unit,
+    onConfirmBooking: () -> Unit,
+) {
+    var showContentSheet by remember { mutableStateOf(false) }
+    var showScheduleSheet by remember { mutableStateOf(false) }
+    val rootSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val contentSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scheduleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val safeIndex = selectedContentIndex.coerceIn(0, (contentOptions.size - 1).coerceAtLeast(0))
+    val picked = contentOptions.getOrNull(safeIndex)
+        ?: ServiceContentPickOption(
+            id = "fallback",
+            label = "标准方案",
+            subtitle = "",
+            priceText = "价格面议",
+            priceBasisText = "",
+            durationDisplay = "",
+        )
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rootSheetState,
+        dragHandle = null,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(start = 16.dp, end = 16.dp, top = DialogTitleTopPadding, bottom = 12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "选择预订信息",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF111111),
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "关闭",
+                        tint = Color(0xFF222222),
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            ServiceDetailChevronRow(
+                icon = Icons.Outlined.Apps,
+                title = "方案选择",
+                subtitle = listOf(picked.label, picked.subtitle, picked.priceText)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" · "),
+                onClick = { showContentSheet = true },
+                verticalPadding = BookingPolicyRowVerticalPadding,
+            )
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                thickness = 1.dp,
+                color = DetailScreenTagDividerColor,
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            if (!extraFeeDescription.isNullOrBlank()) {
+                ServiceDetailSectionHeader("额外费用说明")
+                ServiceDetailInfoCard(text = extraFeeDescription)
+            } else {
+                ServiceDetailChevronRow(
+                    icon = Icons.Outlined.DateRange,
+                    title = "时间选择",
+                    subtitle = scheduleMillis?.let(::formatScheduleSlotDisplay) ?: "请选择日期与时间",
+                    onClick = { showScheduleSheet = true },
+                    verticalPadding = BookingPolicyRowVerticalPadding,
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(26.dp))
+                    .clickable(onClick = onConfirmBooking),
+                shape = RoundedCornerShape(26.dp),
+                color = Color(0xFF111111),
+            ) {
+                Text(
+                    text = "确认预订信息",
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    textAlign = TextAlign.Center,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+
+    if (showContentSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showContentSheet = false },
+            sheetState = contentSheetState,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = DialogTitleTopPadding, bottom = 8.dp),
+            ) {
+                Text(
+                    text = "方案选择",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                contentOptions.forEachIndexed { index, opt ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectedContentIndex(index)
+                                showContentSheet = false
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = index == safeIndex,
+                            onClick = {
+                                onSelectedContentIndex(index)
+                                showContentSheet = false
+                            },
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = opt.label,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                            )
+                            Text(
+                                text = listOf(opt.subtitle, opt.priceText)
+                                    .filter { it.isNotBlank() }
+                                    .joinToString(" · "),
+                                fontSize = 13.sp,
+                                color = RowSubtitleColor,
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+
+    if (showScheduleSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showScheduleSheet = false },
+            sheetState = scheduleSheetState,
+            dragHandle = null,
+        ) {
+            key(scheduleMillis ?: 0L) {
+                ServiceDetailSchedulePickerSheetContent(
+                    initialMillis = scheduleMillis,
+                    allowedWeekdays = scheduleAllowedWeekdays,
+                    bookingTimeRangesJson = scheduleBookingTimeRangesJson,
+                    bookingLeadHours = scheduleBookingLeadHours,
+                    bookingFutureOpenDays = scheduleBookingFutureOpenDays,
+                    hostCalendarServiceId = scheduleHostCalendarServiceId,
+                    onDismiss = { showScheduleSheet = false },
+                    onClear = {
+                        onScheduleMillisChange(null)
+                        showScheduleSheet = false
+                    },
+                    onConfirm = { millis ->
+                        onScheduleMillisChange(millis)
+                        showScheduleSheet = false
+                    },
+                )
             }
         }
     }

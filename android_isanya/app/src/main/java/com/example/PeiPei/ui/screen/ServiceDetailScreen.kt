@@ -151,6 +151,22 @@ private tailrec fun Context.findActivityForFullscreenImage(): Activity? = when (
     else -> null
 }
 
+private fun buildServiceExtraFeeDescription(service: Service): String {
+    val lines = mutableListOf<String>()
+    if (service.prepaymentPercent > 0) {
+        lines += "当前预付款比例为${service.prepaymentPercent}%，最终金额与尾款以沟通确认为准。"
+    } else {
+        lines += "当前无需预付款，最终金额以沟通确认为准。"
+    }
+    val extraRules = ServiceDeclarations.normalizeExtra(service.serviceDeclarationsExtra)
+    if (extraRules.isEmpty()) {
+        lines += "节假日、跨区交通、超时加购、门票或场地等额外费用如有发生，需提前与主理人确认。"
+    } else {
+        lines += "补充说明：${extraRules.take(2).joinToString("；")}"
+    }
+    return lines.joinToString("\n")
+}
+
 private fun applyCreatorPriceAndRulesFromSettings(
     base: Service,
     newPriceText: String,
@@ -196,6 +212,57 @@ private val InquiryComposeBorderGray = Color(0xFFE5E5E5)
 private val InquiryComposePlaceholderGray = Color(0xFFBDBDBD)
 private val InquiryComposeModifyButtonBg = Color(0xFFF2F2F2)
 private val InquiryComposeModifyButtonText = Color(0xFF888888)
+
+private val ServiceTypeKeywordSignals = listOf(
+    "旅拍" to listOf("旅拍", "摄影", "拍照", "跟拍"),
+    "潜水" to listOf("潜水", "自由潜", "水肺"),
+    "冲浪" to listOf("冲浪", "桨板"),
+    "游艇" to listOf("游艇", "帆船", "出海", "海钓"),
+    "按摩" to listOf("按摩", "spa", "理疗"),
+    "妆造" to listOf("化妆", "妆造", "造型"),
+    "美食" to listOf("私厨", "美食", "餐", "晚宴"),
+    "亲子" to listOf("亲子", "家庭"),
+    "情侣" to listOf("情侣", "约会"),
+    "团建" to listOf("团建", "聚会", "派对"),
+)
+
+private fun buildServiceTypeDescription(service: Service): String {
+    val category = ServiceCategories.normalize(service.category)
+    val serviceMode = service.serviceMode.trim()
+    val priceBasis = priceBasisTextForUiDisplay(service.priceBasisText, service.serviceMode).trim()
+    val parts = buildList {
+        if (category.isNotBlank()) add("这是一个$category服务")
+        if (serviceMode.isNotBlank()) add("通常以$serviceMode方式提供")
+        if (priceBasis.isNotBlank()) add("计费说明为$priceBasis")
+    }
+    return if (parts.isNotEmpty()) {
+        parts.joinToString("，") + "，具体安排请与主理人沟通确认。"
+    } else {
+        "服务内容、提供方式与计费规则请与主理人沟通确认。"
+    }
+}
+
+private fun buildServiceKeywordTags(service: Service): List<String> {
+    val category = ServiceCategories.normalize(service.category)
+    val serviceMode = service.serviceMode.trim()
+    val priceBasis = priceBasisTextForUiDisplay(service.priceBasisText, service.serviceMode).trim()
+    val searchableText = listOf(
+        service.title,
+        service.description,
+        category,
+        serviceMode,
+        priceBasis,
+    ).joinToString(" ").lowercase(Locale.getDefault())
+    val matchedSignals = ServiceTypeKeywordSignals.mapNotNull { (label, keywords) ->
+        label.takeIf { keywords.any(searchableText::contains) }
+    }
+    return buildList {
+        if (category.isNotBlank()) add(category)
+        if (serviceMode.isNotBlank()) add(serviceMode)
+        if (priceBasis.isNotBlank()) add(priceBasis)
+        addAll(matchedSignals)
+    }.distinct().take(8)
+}
 
 @Composable
 private fun ServiceDetailBottomPrice(
@@ -276,6 +343,8 @@ fun ServiceDetailScreen(
     var isTogglingFavorite by remember { androidx.compose.runtime.mutableStateOf(false) }
     var showRemoveWishlistConfirm by remember { androidx.compose.runtime.mutableStateOf(false) }
     var isHeroImageDark by remember { androidx.compose.runtime.mutableStateOf(true) }
+    var showBookingSelectionSheet by remember { androidx.compose.runtime.mutableStateOf(false) }
+    var bookingSelectionDateMillis by remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
     var showServiceInquirySheet by remember { androidx.compose.runtime.mutableStateOf(false) }
     var inquiryComposeMessage by remember { androidx.compose.runtime.mutableStateOf("") }
     var inquiryComposeDateMillis by remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
@@ -359,9 +428,8 @@ fun ServiceDetailScreen(
         val cat = ServiceCategories.normalize(service!!.category)
         if (cat.isNotBlank()) add(cat)
         if (service!!.serviceMode.isNotBlank()) add(service!!.serviceMode)
-        if (service!!.location.isNotBlank()) add(
-            com.example.Lulu.util.ServiceLocationPolygonCodec.displayLine(service!!.location)
-        )
+        val basis = priceBasisTextForUiDisplay(service!!.priceBasisText, service!!.serviceMode)
+        if (basis.isNotBlank()) add(basis)
     }
     var selectedContentTierIndex by remember(service!!.id) { mutableIntStateOf(0) }
     val contentTierOptions = remember(service!!.id, service!!.priceText, service!!.priceBasisText) {
@@ -502,6 +570,28 @@ fun ServiceDetailScreen(
                     }
                 }
             }
+        )
+    }
+    if (showBookingSelectionSheet) {
+        ServiceBookingSelectionSheet(
+            contentOptions = contentTierOptions,
+            selectedContentIndex = selectedContentTierIndex,
+            onSelectedContentIndex = { selectedContentTierIndex = it },
+            scheduleMillis = bookingSelectionDateMillis,
+            onScheduleMillisChange = { bookingSelectionDateMillis = it },
+            scheduleAllowedWeekdays = scheduleWeekdays,
+            scheduleBookingTimeRangesJson = service!!.bookingTimeRangesJson,
+            scheduleBookingLeadHours = service!!.bookingLeadHours,
+            scheduleBookingFutureOpenDays = service!!.bookingFutureOpenDays,
+            scheduleHostCalendarServiceId = service!!.id,
+            extraFeeDescription = buildServiceExtraFeeDescription(service!!),
+            onDismiss = { showBookingSelectionSheet = false },
+            onConfirmBooking = {
+                showBookingSelectionSheet = false
+                scope.launch {
+                    snackbarHostState.showSnackbar("预订功能即将上线")
+                }
+            },
         )
     }
     if (showInquiryDateSubpicker) {
@@ -752,9 +842,7 @@ fun ServiceDetailScreen(
                                         rootNavController.navigate(Screen.Login.createRoute()) { launchSingleTop = true }
                                         return@Button
                                     }
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar("预订功能即将上线")
-                                    }
+                                    showBookingSelectionSheet = true
                                 },
                                 shape = RoundedCornerShape(24.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = ServiceDetailActionButtonColor),
@@ -964,8 +1052,8 @@ fun ServiceDetailScreen(
                             contentOptions = contentTierOptions,
                             selectedContentIndex = selectedContentTierIndex,
                             onSelectedContentIndex = { selectedContentTierIndex = it },
-                            scheduleMillis = inquiryComposeDateMillis,
-                            onScheduleMillisChange = { inquiryComposeDateMillis = it },
+                            scheduleMillis = bookingSelectionDateMillis,
+                            onScheduleMillisChange = { bookingSelectionDateMillis = it },
                             scheduleAllowedWeekdays = scheduleWeekdays,
                             scheduleBookingTimeRangesJson = service!!.bookingTimeRangesJson,
                             scheduleBookingLeadHours = service!!.bookingLeadHours,
@@ -977,7 +1065,10 @@ fun ServiceDetailScreen(
                             serviceDeclarationsReaderBody = ServiceDeclarations.declarationReaderBody(
                                 service!!.serviceDeclarationsExtra,
                             ),
-                            serviceAreaLocationRaw = service!!.location,
+                            extraFeeDescription = buildServiceExtraFeeDescription(service!!),
+                            serviceTypeDescription = buildServiceTypeDescription(service!!),
+                            serviceTypeKeywords = buildServiceKeywordTags(service!!),
+                            showBookingSelectionInline = false,
                         )
                         if (showHostReviewsOnDetail) {
                             ProfileReviewsSection(

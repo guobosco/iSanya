@@ -27,7 +27,13 @@ object AvatarUploadUtil {
     ): String? = withContext(Dispatchers.IO) {
         try {
             // 1. 保存并压缩到本地文件
-            val tempFile = saveAvatarToInternalStorage(context, uri) ?: return@withContext null
+            val tempFile = saveImageToInternalStorage(
+                context = context,
+                uri = uri,
+                filePrefix = "avatar",
+                cropToSquare = true,
+                targetMaxSize = 500
+            ) ?: return@withContext null
 
             // 2. 调用网络接口上传
             val serverUrl = repository.uploadAvatar(tempFile)
@@ -47,7 +53,33 @@ object AvatarUploadUtil {
         }
     }
 
-    private fun saveAvatarToInternalStorage(context: Context, uri: Uri): File? {
+    suspend fun processAndUploadProfilePhoto(
+        context: Context,
+        uri: Uri,
+        repository: LuluRepository
+    ): String? = withContext(Dispatchers.IO) {
+        return try {
+            val tempFile = saveImageToInternalStorage(
+                context = context,
+                uri = uri,
+                filePrefix = "profile_photo",
+                cropToSquare = false,
+                targetMaxSize = 1600
+            ) ?: return@withContext null
+            repository.uploadAvatar(tempFile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    private fun saveImageToInternalStorage(
+        context: Context,
+        uri: Uri,
+        filePrefix: String,
+        cropToSquare: Boolean,
+        targetMaxSize: Int
+    ): File? {
         return try {
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             val bitmap = BitmapFactory.decodeStream(inputStream)
@@ -55,25 +87,32 @@ object AvatarUploadUtil {
 
             if (bitmap == null) return null
 
-            // Crop to square (center crop)
-            val size = Math.min(bitmap.width, bitmap.height)
-            val x = (bitmap.width - size) / 2
-            val y = (bitmap.height - size) / 2
-            val squaredBitmap = Bitmap.createBitmap(bitmap, x, y, size, size)
-
-            // Resize to 500x500
-            val targetSize = 500
-            val finalBitmap = if (squaredBitmap.width != targetSize) {
-                Bitmap.createScaledBitmap(squaredBitmap, targetSize, targetSize, true)
+            val preparedBitmap = if (cropToSquare) {
+                val size = minOf(bitmap.width, bitmap.height)
+                val x = (bitmap.width - size) / 2
+                val y = (bitmap.height - size) / 2
+                Bitmap.createBitmap(bitmap, x, y, size, size)
             } else {
-                squaredBitmap
+                bitmap
             }
 
-            // Save to internal storage
-            val filename = "avatar_${System.currentTimeMillis()}.jpg"
+            val longestSide = maxOf(preparedBitmap.width, preparedBitmap.height)
+            val finalBitmap = if (longestSide > targetMaxSize) {
+                val scale = targetMaxSize.toFloat() / longestSide.toFloat()
+                Bitmap.createScaledBitmap(
+                    preparedBitmap,
+                    (preparedBitmap.width * scale).toInt().coerceAtLeast(1),
+                    (preparedBitmap.height * scale).toInt().coerceAtLeast(1),
+                    true
+                )
+            } else {
+                preparedBitmap
+            }
+
+            val filename = "${filePrefix}_${System.currentTimeMillis()}.jpg"
             val file = File(context.filesDir, filename)
             val outputStream = FileOutputStream(file)
-            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+            finalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
             outputStream.flush()
             outputStream.close()
 

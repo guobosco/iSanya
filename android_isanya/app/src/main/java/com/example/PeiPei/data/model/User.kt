@@ -14,6 +14,8 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+const val MAX_PROFILE_WALL_IMAGE_COUNT = 18
+
 /**
  * 用户数据模型
  * 功能：表示一个应用用户，包含用户的基本信息和认证相关数据
@@ -32,6 +34,8 @@ data class User(
     val email: String? = "", // Changed to nullable to match optional
     @SerializedName("photo_url")
     val photoUrl: String = "",
+    @SerializedName("profile_image_urls")
+    val profileImageUrls: List<String> = emptyList(), // 资料照片墙
     val tags: List<String> = emptyList(), // 用户标签
     @SerializedName("pei_pei_id")
     val peiPeiId: String = "", // SanyaGo ID
@@ -94,6 +98,25 @@ data class User(
     @SerializedName("updated_at")
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+fun User.withAvatarIncludedInPhotoWall(
+    avatarUrl: String,
+    maxPhotoCount: Int = MAX_PROFILE_WALL_IMAGE_COUNT
+): User {
+    val normalizedAvatarUrl = avatarUrl.trim()
+    if (normalizedAvatarUrl.isEmpty()) {
+        return this
+    }
+    val mergedPhotoWallUrls = buildList {
+        add(normalizedAvatarUrl)
+        addAll(profileImageUrls.filterNot { it == normalizedAvatarUrl })
+    }.take(maxPhotoCount)
+    return copy(
+        photoUrl = normalizedAvatarUrl,
+        profileImageUrls = mergedPhotoWallUrls,
+        updatedAt = System.currentTimeMillis()
+    )
+}
 
 /** 体重展示为整数或一位小数 + kg */
 fun formatWeightKgForDisplay(kg: Float): String {

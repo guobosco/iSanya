@@ -14,7 +14,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -108,6 +111,7 @@ import com.example.Lulu.ui.viewmodel.ServiceHostProfileViewModel
 
 /** 主资料详情页 LazyColumn 与底栏按钮相对屏幕左右的留白（与「我的」页卡片边距对齐） */
 private val ServiceHostProfileHorizontalInset = 24.dp
+private val ProfilePhotoWallImageSpacing = 10.dp
 
 private fun platformYearsOnLulu(createdAt: Long): String {
     val elapsed = System.currentTimeMillis() - createdAt
@@ -116,7 +120,11 @@ private fun platformYearsOnLulu(createdAt: Long): String {
     return if (years <= 0) "不足1年" else "${years}年"
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalLayoutApi::class
+)
 @Composable
 fun ServiceHostProfileScreen(
     navController: NavController,
@@ -151,7 +159,7 @@ fun ServiceHostProfileScreen(
     }
 
     val user = userState!!
-    var showFullScreenAvatar by remember { mutableStateOf(false) }
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
 
     val isDarkTheme = isSystemInDarkTheme()
     val pageColor = if (isDarkTheme) Color(0xFF111111) else Color(0xFFFFFFFF)
@@ -163,10 +171,10 @@ fun ServiceHostProfileScreen(
     var showAllReviewsSheet by remember { mutableStateOf(false) }
     val allReviewsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    if (showFullScreenAvatar && user.photoUrl.isNotEmpty()) {
+    if (!fullScreenImageUrl.isNullOrEmpty()) {
         FullScreenImageDialog(
-            imageUrl = user.photoUrl,
-            onDismiss = { showFullScreenAvatar = false }
+            imageUrl = fullScreenImageUrl.orEmpty(),
+            onDismiss = { fullScreenImageUrl = null }
         )
     }
 
@@ -228,7 +236,11 @@ fun ServiceHostProfileScreen(
                     user = user,
                     cardColor = if (isDarkTheme) cardColor else Color(0xFFFFFFFF),
                     isDarkTheme = isDarkTheme,
-                    onAvatarClick = { showFullScreenAvatar = true }
+                    onAvatarClick = {
+                        if (user.photoUrl.isNotEmpty()) {
+                            fullScreenImageUrl = user.photoUrl
+                        }
+                    }
                 )
             }
 
@@ -248,21 +260,17 @@ fun ServiceHostProfileScreen(
             }
 
             item {
-                ProfileReviewsSection(
-                    sectionTitle = if (isSelfProfile) {
-                        "我的评价"
-                    } else {
-                        "${user.name.ifEmpty { "Ta" }}的评价"
-                    },
-                    reviews = reviewData,
+                PhotoWallSection(
+                    photoUrls = user.profileImageUrls,
+                    isSelfProfile = isSelfProfile,
+                    displayName = user.name.ifEmpty { "Ta" },
                     isDarkTheme = isDarkTheme,
-                    onShowMore = { showAllReviewsSheet = true },
+                    onPhotoClick = { photoUrl -> fullScreenImageUrl = photoUrl }
                 )
             }
 
             item {
                 PublishedServicesSection(
-                    isSelfProfile = isSelfProfile,
                     displayName = user.name.ifEmpty { "Ta" },
                     services = publishedServices,
                     averageRating = user.averageRating,
@@ -273,6 +281,15 @@ fun ServiceHostProfileScreen(
                             launchSingleTop = true
                         }
                     }
+                )
+            }
+
+            item {
+                ProfileReviewsSection(
+                    sectionTitle = "我的评价",
+                    reviews = reviewData,
+                    isDarkTheme = isDarkTheme,
+                    onShowMore = { showAllReviewsSheet = true },
                 )
             }
         }
@@ -362,6 +379,86 @@ private fun ServiceHostProfileChatBottomBar(
                     fontSize = 17.sp,
                     fontWeight = FontWeight.SemiBold
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotoWallSection(
+    photoUrls: List<String>,
+    isSelfProfile: Boolean,
+    displayName: String,
+    isDarkTheme: Boolean,
+    onPhotoClick: (String) -> Unit
+) {
+    val titleColor = if (isDarkTheme) Color.White else Color(0xFF222222)
+    val mutedColor = if (isDarkTheme) Color(0xFFA8A8A8) else Color(0xFF777777)
+    val sectionCardColor = if (isDarkTheme) Color(0xFF1B1B1B) else Color(0xFFFFFFFF)
+    val dividerColor = if (isDarkTheme) Color(0xFF2D2D2D) else Color(0xFFE8E8E8)
+    val emptyText = if (isSelfProfile) {
+        "还没有上传照片，去编辑资料添加几张更容易让别人了解你。"
+    } else {
+        "${displayName} 还没有公开照片。"
+    }
+
+    Column {
+        Divider(
+            modifier = Modifier.padding(bottom = 12.dp),
+            thickness = 1.dp,
+            color = dividerColor
+        )
+        Text(
+            text = "照片墙",
+            color = titleColor,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        if (photoUrls.isEmpty()) {
+            Text(
+                text = emptyText,
+                color = mutedColor,
+                fontSize = 14.sp,
+                lineHeight = 20.sp
+            )
+        } else {
+            Surface(
+                color = sectionCardColor,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = if (isDarkTheme) 1.dp else 0.dp,
+                tonalElevation = 0.dp
+            ) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp)
+                ) {
+                    val itemSize = (maxWidth - ProfilePhotoWallImageSpacing * 2) / 3
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing),
+                        verticalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        photoUrls.forEach { photoUrl ->
+                            Surface(
+                                modifier = Modifier
+                                    .size(itemSize)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { onPhotoClick(photoUrl) },
+                                shape = RoundedCornerShape(14.dp),
+                                color = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE8E8E8)
+                            ) {
+                                AsyncImage(
+                                    model = RetrofitClient.normalizeBackendMediaUrlForDisplay(photoUrl),
+                                    contentDescription = "资料照片",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -778,7 +875,6 @@ private fun DetailLine(
 
 @Composable
 private fun PublishedServicesSection(
-    isSelfProfile: Boolean,
     displayName: String,
     services: List<Service>,
     averageRating: Double,
@@ -788,7 +884,6 @@ private fun PublishedServicesSection(
 ) {
     val titleColor = if (isDarkTheme) Color.White else Color(0xFF222222)
     val mutedColor = if (isDarkTheme) Color(0xFFA8A8A8) else Color(0xFF777777)
-    val sectionTitle = if (isSelfProfile) "我发布的服务" else "${displayName}发布的服务"
     val config = LocalConfiguration.current
     val cardWidth = ((config.screenWidthDp - 48) * 0.46f).coerceAtLeast(136f).dp
 
@@ -799,7 +894,7 @@ private fun PublishedServicesSection(
             color = if (isDarkTheme) Color(0xFF2D2D2D) else Color(0xFFE8E8E8)
         )
         Text(
-            text = sectionTitle,
+            text = "我发布的服务",
             color = titleColor,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
@@ -807,7 +902,7 @@ private fun PublishedServicesSection(
         )
         if (services.isEmpty()) {
             Text(
-                text = "暂无发布的服务",
+                text = if (displayName.isBlank()) "暂无发布的服务" else "${displayName} 暂无发布的服务",
                 color = mutedColor,
                 fontSize = 14.sp
             )
