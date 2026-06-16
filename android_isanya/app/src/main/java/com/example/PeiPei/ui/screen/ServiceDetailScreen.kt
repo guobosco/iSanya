@@ -231,8 +231,8 @@ private fun buildServiceTypeDescription(service: Service): String {
     val serviceMode = service.serviceMode.trim()
     val priceBasis = priceBasisTextForUiDisplay(service.priceBasisText, service.serviceMode).trim()
     val parts = buildList {
-        if (category.isNotBlank()) add("这是一个$category服务")
-        if (serviceMode.isNotBlank()) add("通常以$serviceMode方式提供")
+        if (category.isNotBlank()) add("这是一个${category}服务")
+        if (serviceMode.isNotBlank()) add("通常以${serviceMode}方式提供")
         if (priceBasis.isNotBlank()) add("计费说明为$priceBasis")
     }
     return if (parts.isNotEmpty()) {

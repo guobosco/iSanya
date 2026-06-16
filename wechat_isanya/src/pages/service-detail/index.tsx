@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Taro, { useLoad } from '@tarojs/taro';
-import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components';
+import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components';
 import styles from './index.module.scss';
 
 type DetailPlan = {
@@ -17,6 +17,18 @@ type DetailReview = {
   user: string;
   date: string;
   content: string;
+};
+
+type BookingTimeSlot = {
+  start: string;
+  end: string;
+};
+
+type BookingDayOption = {
+  key: string;
+  label: string;
+  description: string;
+  timeOptions: string[];
 };
 
 type ServiceDetail = {
@@ -36,6 +48,10 @@ type ServiceDetail = {
   description: string[];
   notes: string[];
   extraFeeDescription: string;
+  prepaymentPercent: number;
+  bookingTimeRangesJson: string;
+  bookingLeadHours: number;
+  bookingFutureOpenDays: number;
   plans: DetailPlan[];
   reviews: DetailReview[];
 };
@@ -138,6 +154,133 @@ const buildExtraFeeDescription = (data: any) => {
   return lines.join('\n');
 };
 
+const bookingWeekdayLabels = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+const padTwo = (value: number) => value.toString().padStart(2, '0');
+
+const toDateKey = (date: Date) =>
+  `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
+
+const parseMinutes = (hhmm: string) => {
+  const [hourText, minuteText] = hhmm.trim().split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+  return hour * 60 + minute;
+};
+
+const formatClockLabel = (hhmm: string) => {
+  const minutes = parseMinutes(hhmm);
+  if (minutes === null) return hhmm;
+  const hour = Math.floor(minutes / 60);
+  const minute = minutes % 60;
+  return `${hour}:${padTwo(minute)}`;
+};
+
+const halfHourLabels = () =>
+  Array.from({ length: 48 }, (_, index) => {
+    const hour = Math.floor(index / 2);
+    const minute = (index % 2) * 30;
+    return `${padTwo(hour)}:${padTwo(minute)}`;
+  });
+
+const decodeBookingTimeRanges = (rawJson?: string) => {
+  if (!rawJson?.trim()) return [];
+  try {
+    const parsed = JSON.parse(rawJson);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        start: typeof item?.start === 'string' ? item.start : '',
+        end: typeof item?.end === 'string' ? item.end : '',
+      }))
+      .filter((item) => item.start && item.end);
+  } catch {
+    return [];
+  }
+};
+
+const availableStartTimesForDay = (bookingTimeRangesJson?: string) => {
+  const slots = decodeBookingTimeRanges(bookingTimeRangesJson);
+  const ranges = slots.length ? slots : [{ start: '00:00', end: '24:00' } as BookingTimeSlot];
+  const output = new Set<string>();
+
+  ranges.forEach((slot) => {
+    const startMinutes = parseMinutes(slot.start);
+    const endMinutes = slot.end === '24:00' ? 24 * 60 : parseMinutes(slot.end);
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) return;
+
+    let current = Math.ceil(startMinutes / 30) * 30;
+    while (current < endMinutes && current < 24 * 60) {
+      output.add(`${padTwo(Math.floor(current / 60))}:${padTwo(current % 60)}`);
+      current += 30;
+    }
+  });
+
+  return Array.from(output).sort();
+};
+
+const normalizeBookingFutureOpenDays = (value?: number) => {
+  const days = Number(value ?? 30);
+  if (!Number.isFinite(days) || days < 7) return 30;
+  if (days > 180) return 180;
+  return Math.floor(days);
+};
+
+const normalizeBookingLeadHours = (value?: number) => {
+  const hours = Number(value ?? 0);
+  if (!Number.isFinite(hours) || hours < 0) return 0;
+  if (hours > 168) return 168;
+  return hours;
+};
+
+const buildBookingDayLabel = (date: Date, today: Date) => {
+  const diffDays = Math.round((date.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) return '今天';
+  if (diffDays === 1) return '明天';
+  if (diffDays === 2) return '后天';
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+const buildBookingDayOptions = (service: ServiceDetail | null): BookingDayOption[] => {
+  if (!service) return [];
+
+  const dayCount = Math.min(normalizeBookingFutureOpenDays(service.bookingFutureOpenDays), 14);
+  const now = Date.now();
+  const leadMillis = normalizeBookingLeadHours(service.bookingLeadHours) * 60 * 60 * 1000;
+  const earliestTime = now + leadMillis;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const allTimes = availableStartTimesForDay(service.bookingTimeRangesJson);
+
+  return Array.from({ length: dayCount }, (_, offset) => {
+    const currentDate = new Date(today);
+    currentDate.setDate(today.getDate() + offset);
+
+    const timeOptions = allTimes.filter((time) => {
+      const minutes = parseMinutes(time);
+      if (minutes === null) return false;
+      const slotDate = new Date(currentDate);
+      slotDate.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+      return slotDate.getTime() >= earliestTime;
+    });
+
+    return {
+      key: toDateKey(currentDate),
+      label: buildBookingDayLabel(currentDate, today),
+      description: `${currentDate.getMonth() + 1}月${currentDate.getDate()}日 ${bookingWeekdayLabels[currentDate.getDay()]}`,
+      timeOptions,
+    };
+  }).filter((item) => item.timeOptions.length > 0);
+};
+
+const buildPaymentPageUrl = (params: Record<string, string | number>) =>
+  `/pages/payment/index?${Object.entries(params)
+    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+    .join('&')}`;
+
 function ServiceDetailPage() {
   const serviceId = Taro.getCurrentInstance().router?.params?.id ?? '';
   const [service, setService] = useState<ServiceDetail | null>(null);
@@ -145,6 +288,8 @@ function ServiceDetailPage() {
   const [currentImage, setCurrentImage] = useState(0);
   const [favorite, setFavorite] = useState(false);
   const [bookingSheetVisible, setBookingSheetVisible] = useState(false);
+  const [selectedBookingDateKey, setSelectedBookingDateKey] = useState('');
+  const [selectedBookingTime, setSelectedBookingTime] = useState('');
 
   useLoad(() => {
     if (!serviceId) return;
@@ -176,6 +321,10 @@ function ServiceDetailPage() {
               '如遇极端天气，可协商改期。'
             ],
             extraFeeDescription: buildExtraFeeDescription(data),
+            prepaymentPercent: Number(data.prepayment_percent ?? 0),
+            bookingTimeRangesJson: typeof data.booking_time_ranges_json === 'string' ? data.booking_time_ranges_json : '',
+            bookingLeadHours: Number(data.booking_lead_hours ?? 0),
+            bookingFutureOpenDays: Number(data.booking_future_open_days ?? 30),
             plans: [
               {
                 id: `${data.id}-plan-1`,
@@ -207,13 +356,62 @@ function ServiceDetailPage() {
     () => service.plans[selectedPlanIndex] ?? service.plans[0],
     [service.plans, selectedPlanIndex]
   );
+  const bookingDayOptions = useMemo(() => buildBookingDayOptions(service), [service]);
+  const selectedBookingDay = useMemo(
+    () => bookingDayOptions.find((item) => item.key === selectedBookingDateKey) ?? bookingDayOptions[0],
+    [bookingDayOptions, selectedBookingDateKey]
+  );
   const currentPreviewImage = service.images[currentImage] ?? service.images[0] ?? '';
+
+  useEffect(() => {
+    if (!bookingDayOptions.length) {
+      setSelectedBookingDateKey('');
+      return;
+    }
+    if (!bookingDayOptions.some((item) => item.key === selectedBookingDateKey)) {
+      setSelectedBookingDateKey(bookingDayOptions[0].key);
+    }
+  }, [bookingDayOptions, selectedBookingDateKey]);
+
+  useEffect(() => {
+    if (!selectedBookingDay) {
+      setSelectedBookingTime('');
+      return;
+    }
+    if (!selectedBookingDay.timeOptions.includes(selectedBookingTime)) {
+      setSelectedBookingTime(selectedBookingDay.timeOptions[0] ?? '');
+    }
+  }, [selectedBookingDay, selectedBookingTime]);
 
   const handlePreviewImages = (index: number) => {
     if (!service.images.length) return;
     Taro.previewImage({
       current: service.images[index] ?? currentPreviewImage,
       urls: service.images,
+    });
+  };
+
+  const handleBookingConfirm = () => {
+    if (!service) return;
+    if (!selectedBookingDay || !selectedBookingTime) {
+      Taro.showToast({ title: '请选择预期时间', icon: 'none' });
+      return;
+    }
+
+    setBookingSheetVisible(false);
+    Taro.navigateTo({
+      url: buildPaymentPageUrl({
+        serviceId: service.id,
+        title: service.title,
+        planTitle: selectedPlan.title,
+        planSubtitle: selectedPlan.subtitle,
+        price: selectedPlan.price,
+        duration: selectedPlan.duration,
+        bookingDate: selectedBookingDay.description,
+        bookingTime: formatClockLabel(selectedBookingTime),
+        location: service.location || '与主理人沟通确认',
+        prepaymentPercent: service.prepaymentPercent,
+      }),
     });
   };
 
@@ -323,8 +521,7 @@ function ServiceDetailPage() {
         </View>
 
         <View className={styles.section}>
-          <Text className={styles.sectionTitle}>服务类型说明</Text>
-          <Text className={styles.serviceTypeDesc}>{service.serviceTypeDescription}</Text>
+          <Text className={styles.sectionTitle}>服务特点</Text>
           <View className={styles.keywordWrap}>
             {service.serviceTypeKeywords.map((keyword) => (
               <View key={keyword} className={styles.keywordChip}>
@@ -401,6 +598,49 @@ function ServiceDetailPage() {
             </View>
 
             <View className={styles.bookingSection}>
+              <Text className={styles.bookingSectionTitle}>预期时间</Text>
+              {bookingDayOptions.length ? (
+                <>
+                  <ScrollView className={styles.bookingDateScroll} scrollX enhanced showScrollbar={false}>
+                    <View className={styles.bookingDateRow}>
+                      {bookingDayOptions.map((day) => (
+                        <View
+                          key={day.key}
+                          className={`${styles.bookingDateChip} ${selectedBookingDay?.key === day.key ? styles.bookingDateChipActive : ''}`}
+                          onClick={() => setSelectedBookingDateKey(day.key)}
+                        >
+                          <Text className={`${styles.bookingDateChipLabel} ${selectedBookingDay?.key === day.key ? styles.bookingDateChipLabelActive : ''}`}>
+                            {day.label}
+                          </Text>
+                          <Text className={`${styles.bookingDateChipDesc} ${selectedBookingDay?.key === day.key ? styles.bookingDateChipDescActive : ''}`}>
+                            {day.description}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                  <View className={styles.bookingTimeWrap}>
+                    {selectedBookingDay?.timeOptions.map((time) => (
+                      <View
+                        key={time}
+                        className={`${styles.bookingTimeChip} ${selectedBookingTime === time ? styles.bookingTimeChipActive : ''}`}
+                        onClick={() => setSelectedBookingTime(time)}
+                      >
+                        <Text className={`${styles.bookingTimeChipText} ${selectedBookingTime === time ? styles.bookingTimeChipTextActive : ''}`}>
+                          {formatClockLabel(time)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <View className={styles.bookingInfoCard}>
+                  <Text className={styles.bookingInfoText}>当前暂无可预约时段，请稍后再试或联系主理人确认。</Text>
+                </View>
+              )}
+            </View>
+
+            <View className={styles.bookingSection}>
               <Text className={styles.bookingSectionTitle}>额外费用说明</Text>
               <View className={styles.bookingInfoCard}>
                 <Text className={styles.bookingInfoText}>{service.extraFeeDescription}</Text>
@@ -409,12 +649,9 @@ function ServiceDetailPage() {
 
             <View
               className={styles.bookingConfirmButton}
-              onClick={() => {
-                setBookingSheetVisible(false);
-                Taro.showToast({ title: '预订功能即将上线', icon: 'none' });
-              }}
+              onClick={handleBookingConfirm}
             >
-              <Text className={styles.bookingConfirmButtonText}>确认预订信息</Text>
+              <Text className={styles.bookingConfirmButtonText}>完成，去支付</Text>
             </View>
           </View>
         </View>

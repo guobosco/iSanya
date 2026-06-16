@@ -3,6 +3,7 @@
 package com.example.Lulu.ui.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -699,21 +700,9 @@ fun ServiceDetailBookingPolicySections(
             color = DetailScreenTagDividerColor,
         )
         Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
-        if (!serviceTypeDescription.isNullOrBlank() || serviceTypeKeywords.isNotEmpty()) {
-            ServiceDetailSectionHeader(title = "服务类型说明")
-            Text(
-                text = serviceTypeDescription?.ifBlank { ServiceDetailServiceTypeFallback }
-                    ?: ServiceDetailServiceTypeFallback,
-                color = RowSubtitleColor,
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Normal,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            if (serviceTypeKeywords.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                ServiceTypeKeywordTags(tags = serviceTypeKeywords)
-            }
+        if (serviceTypeKeywords.isNotEmpty()) {
+            ServiceDetailSectionHeader(title = "服务特点")
+            ServiceTypeKeywordTags(tags = serviceTypeKeywords)
             Spacer(modifier = Modifier.height(SectionBlockVerticalGap))
             HorizontalDivider(
                 modifier = Modifier.fillMaxWidth(),
@@ -767,11 +756,11 @@ fun ServiceDetailBookingPolicySections(
         Spacer(modifier = Modifier.height(8.dp))
         ServiceDetailChevronRow(
             icon = Icons.Outlined.Schedule,
-            title = "集合与行程",
-            subtitle = "集合地点、动线时长与人数上限",
+            title = "集合地点",
+            subtitle = "集合地点、接待时段与到达方式说明",
             verticalPadding = BookingPolicyRowVerticalPadding,
             onClick = {
-                policyReaderTitle = "集合与行程"
+                policyReaderTitle = "集合地点"
                 policyReaderBody =
                     "请在预订后与发布者确认集合地点、可接待时段与人数上限。若服务含上门或到店，请提前说明交通与场地要求；实际动线可能因天气或路况微调。"
                 showPolicyReader = true
@@ -780,13 +769,15 @@ fun ServiceDetailBookingPolicySections(
         Spacer(modifier = Modifier.height(8.dp))
         ServiceDetailChevronRow(
             icon = Icons.Outlined.Shield,
-            title = "人身安全与服务环境",
-            subtitle = "安全提示与场所规范",
+            title = "额外费用",
+            subtitle = "交通、门票、超时加购等费用说明",
             verticalPadding = BookingPolicyRowVerticalPadding,
             onClick = {
-                policyReaderTitle = "人身安全与服务环境"
+                policyReaderTitle = "额外费用"
                 policyReaderBody =
-                    "参与服务请注意人身与财物安全，遵守当地法规及场所管理要求。未成年人请在监护人陪同下参与；如身体不适或有特殊禁忌，请提前告知发布者。"
+                    extraFeeDescription?.ifBlank {
+                        "节假日、跨区交通、超时加购、门票或场地等额外费用如有发生，需提前与主理人确认。"
+                    } ?: "节假日、跨区交通、超时加购、门票或场地等额外费用如有发生，需提前与主理人确认。"
                 showPolicyReader = true
             },
         )

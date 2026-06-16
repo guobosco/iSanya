@@ -877,61 +877,7 @@ private fun AboutMeSectionCard(
                 .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
             Text(
-                "关于我",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "用照片、简介介绍自己，更容易遇到志同道合的人。",
-                fontSize = 13.sp,
-                lineHeight = 20.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                "照片墙",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                "最多上传 $maxPhotoCount 张资料照片",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                photoUrls.forEach { photoUrl ->
-                    ProfilePhotoWallItem(
-                        photoUrl = photoUrl,
-                        onRemove = { onRemovePhoto(photoUrl) }
-                    )
-                }
-                if (photoUrls.size < maxPhotoCount) {
-                    AddPhotoWallItem(
-                        enabled = !isUploading,
-                        onClick = onUploadClick
-                    )
-                }
-            }
-            if (photoUrls.isEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(
-                    "还没有上传资料照片，添加几张更容易让别人了解你。",
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.height(18.dp))
-            Text(
-                "个人简介",
+                "自我介绍",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -971,10 +917,45 @@ private fun AboutMeSectionCard(
                     disabledContainerColor = Color.White
                 )
             )
+            Spacer(modifier = Modifier.height(18.dp))
+            Text(
+                "照片墙",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                photoUrls.forEach { photoUrl ->
+                    ProfilePhotoWallItem(
+                        photoUrl = photoUrl,
+                        onRemove = { onRemovePhoto(photoUrl) }
+                    )
+                }
+                if (photoUrls.size < maxPhotoCount) {
+                    AddPhotoWallItem(
+                        enabled = !isUploading,
+                        onClick = onUploadClick
+                    )
+                }
+            }
+            if (photoUrls.isEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "还没有上传资料照片，添加几张更容易让别人了解你。",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun InterestSectionCard(
     tags: List<String>,

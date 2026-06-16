@@ -58,7 +58,7 @@ object AvatarUploadUtil {
         uri: Uri,
         repository: LuluRepository
     ): String? = withContext(Dispatchers.IO) {
-        return try {
+        try {
             val tempFile = saveImageToInternalStorage(
                 context = context,
                 uri = uri,

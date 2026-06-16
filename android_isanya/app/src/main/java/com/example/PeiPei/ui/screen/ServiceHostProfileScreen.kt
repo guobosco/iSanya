@@ -113,6 +113,21 @@ import com.example.Lulu.ui.viewmodel.ServiceHostProfileViewModel
 private val ServiceHostProfileHorizontalInset = 24.dp
 private val ProfilePhotoWallImageSpacing = 10.dp
 
+private fun thirdPersonPronoun(gender: String): String = when (gender.trim()) {
+    "女" -> "她"
+    "男" -> "他"
+    else -> "她（他）"
+}
+
+private fun profileAboutTitle(isSelfProfile: Boolean, gender: String): String =
+    if (isSelfProfile) "关于我" else "关于${thirdPersonPronoun(gender)}"
+
+private fun profilePublishedServicesTitle(isSelfProfile: Boolean, gender: String): String =
+    if (isSelfProfile) "我发布的服务" else "${thirdPersonPronoun(gender)}发布的服务"
+
+private fun profileReviewsTitle(isSelfProfile: Boolean, gender: String): String =
+    if (isSelfProfile) "我的评价" else "${thirdPersonPronoun(gender)}的评价"
+
 private fun platformYearsOnLulu(createdAt: Long): String {
     val elapsed = System.currentTimeMillis() - createdAt
     if (elapsed <= 0L) return "不足1年"
@@ -272,9 +287,11 @@ fun ServiceHostProfileScreen(
             item {
                 PublishedServicesSection(
                     displayName = user.name.ifEmpty { "Ta" },
+                    gender = user.gender,
                     services = publishedServices,
                     averageRating = user.averageRating,
                     reviewCount = user.reviewCount,
+                    isSelfProfile = isSelfProfile,
                     isDarkTheme = isDarkTheme,
                     onServiceClick = { serviceId ->
                         navController.navigate(Screen.ServiceDetail.createRoute(serviceId)) {
@@ -286,7 +303,7 @@ fun ServiceHostProfileScreen(
 
             item {
                 ProfileReviewsSection(
-                    sectionTitle = "我的评价",
+                    sectionTitle = profileReviewsTitle(isSelfProfile, user.gender),
                     reviews = reviewData,
                     isDarkTheme = isDarkTheme,
                     onShowMore = { showAllReviewsSheet = true },
@@ -384,6 +401,7 @@ private fun ServiceHostProfileChatBottomBar(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PhotoWallSection(
     photoUrls: List<String>,
@@ -645,9 +663,9 @@ private fun DetailInfoSection(
         else -> "身份未认证"
     }
 
-    val showWork = !hideEmptyFields || user.jobTitle.isNotBlank()
     val showAbout = !hideEmptyFields || user.signature.isNotBlank()
     val showHobbiesLine = !hideEmptyFields || user.tags.isNotEmpty()
+    val showWorkLine = !hideEmptyFields || user.jobTitle.isNotBlank()
     val showEducationLine = !hideEmptyFields || user.education.isNotBlank()
     val showBirthLine = !hideEmptyFields || user.birthDecade.isNotBlank()
     val showSongLine = !hideEmptyFields || user.middleSchoolFavoriteSong.isNotBlank()
@@ -672,7 +690,9 @@ private fun DetailInfoSection(
             if (user.weightKg > 0f) add(formatWeightKgForDisplay(user.weightKg))
         }.joinToString(" · ").ifEmpty { "未填写" }
     }
-    val hasOtherSubsection = showHobbiesLine || showEducationLine || showBirthLine || showSongLine || showHeightWeightLine
+    val hasAboutSection = showAbout || showHobbiesLine || showWorkLine || showEducationLine ||
+        showBirthLine || showSongLine || showHeightWeightLine
+    val hasOtherSubsection = showWorkLine || showEducationLine || showBirthLine || showSongLine || showHeightWeightLine
     var otherDetailsExpanded by rememberSaveable { mutableStateOf(false) }
 
     Card(
@@ -681,7 +701,7 @@ private fun DetailInfoSection(
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(modifier = Modifier.padding(vertical = 12.dp)) {
             if (!user.identityVerified) {
                 Box(
                     modifier = Modifier
@@ -716,91 +736,100 @@ private fun DetailInfoSection(
                 }
             }
 
-            if (showWork) {
-                DetailLine(
-                    Icons.Outlined.WorkOutline,
-                    "我的工作：${if (hideEmptyFields) user.jobTitle else user.jobTitle.ifEmpty { "未填写" }}",
-                    textColor
+            if (hasAboutSection) {
+                Text(
+                    text = profileAboutTitle(isSelfProfile, user.gender),
+                    color = textColor,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp)
                 )
-            }
-            if (showAbout) {
-                DetailAboutMeBlock(
-                    body = if (hideEmptyFields) user.signature.trim() else aboutText,
-                    textColor = textColor,
-                    secondaryColor = mutedColor
-                )
-            }
-
-            if (hasOtherSubsection) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 6.dp),
-                    thickness = 1.dp,
-                    color = if (isDarkTheme) Color(0xFF2E2E2E) else Color(0xFFE8E8E8)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { otherDetailsExpanded = !otherDetailsExpanded }
-                        .padding(vertical = 4.dp, horizontal = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "其他资料",
-                        color = mutedColor,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Icon(
-                        imageVector = if (otherDetailsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                        contentDescription = if (otherDetailsExpanded) "收起" else "展开",
-                        tint = mutedColor,
-                        modifier = Modifier.size(22.dp)
+                if (showAbout) {
+                    DetailLine(
+                        Icons.AutoMirrored.Outlined.Article,
+                        "自我介绍：${if (hideEmptyFields) user.signature.trim() else aboutText}",
+                        textColor,
+                        maxLines = 4
                     )
                 }
-                AnimatedVisibility(
-                    visible = otherDetailsExpanded,
-                    enter = fadeIn() + expandVertically(),
-                    exit = fadeOut() + shrinkVertically()
-                ) {
-                    Column {
-                        if (showHobbiesLine) {
-                            DetailLine(
-                                Icons.Outlined.FavoriteBorder,
-                                "我的兴趣爱好：${if (hideEmptyFields) user.tags.joinToString("、") else interestsText}",
-                                textColor,
-                                maxLines = 4
-                            )
-                        }
-                        if (showEducationLine) {
-                            DetailLine(
-                                Icons.Outlined.School,
-                                "曾就读于：${if (hideEmptyFields) user.education else user.education.ifEmpty { "未填写" }}",
-                                textColor
-                            )
-                        }
-                        if (showBirthLine) {
-                            DetailLine(
-                                Icons.Filled.Cake,
-                                "我出生的年代：${if (hideEmptyFields) user.birthDecade else user.birthDecade.ifEmpty { "未填写" }}",
-                                textColor
-                            )
-                        }
-                        if (showHeightWeightLine) {
-                            DetailLine(
-                                Icons.Outlined.FitnessCenter,
-                                "身高体重：$heightWeightDetailText",
-                                textColor
-                            )
-                        }
-                        if (showSongLine) {
-                            DetailLine(
-                                Icons.Filled.MusicNote,
-                                "中学时最喜欢的歌曲：${if (hideEmptyFields) user.middleSchoolFavoriteSong else user.middleSchoolFavoriteSong.ifEmpty { "未填写" }}",
-                                textColor,
-                                maxLines = 3
-                            )
+                if (showHobbiesLine) {
+                    DetailLine(
+                        Icons.Outlined.FavoriteBorder,
+                        "兴趣爱好：${if (hideEmptyFields) user.tags.joinToString("、") else interestsText}",
+                        textColor,
+                        maxLines = 4
+                    )
+                }
+                if (hasOtherSubsection) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        thickness = 1.dp,
+                        color = if (isDarkTheme) Color(0xFF2E2E2E) else Color(0xFFE8E8E8)
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { otherDetailsExpanded = !otherDetailsExpanded }
+                            .padding(vertical = 4.dp, horizontal = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "其他资料",
+                            color = mutedColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Icon(
+                            imageVector = if (otherDetailsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (otherDetailsExpanded) "收起" else "展开",
+                            tint = mutedColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    AnimatedVisibility(
+                        visible = otherDetailsExpanded,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column {
+                            if (showWorkLine) {
+                                DetailLine(
+                                    Icons.Outlined.WorkOutline,
+                                    "我的工作：${if (hideEmptyFields) user.jobTitle else user.jobTitle.ifEmpty { "未填写" }}",
+                                    textColor
+                                )
+                            }
+                            if (showEducationLine) {
+                                DetailLine(
+                                    Icons.Outlined.School,
+                                    "曾就读于：${if (hideEmptyFields) user.education else user.education.ifEmpty { "未填写" }}",
+                                    textColor
+                                )
+                            }
+                            if (showBirthLine) {
+                                DetailLine(
+                                    Icons.Filled.Cake,
+                                    "我出生的年代：${if (hideEmptyFields) user.birthDecade else user.birthDecade.ifEmpty { "未填写" }}",
+                                    textColor
+                                )
+                            }
+                            if (showHeightWeightLine) {
+                                DetailLine(
+                                    Icons.Outlined.FitnessCenter,
+                                    "身高体重：$heightWeightDetailText",
+                                    textColor
+                                )
+                            }
+                            if (showSongLine) {
+                                DetailLine(
+                                    Icons.Filled.MusicNote,
+                                    "中学时最喜欢的歌曲：${if (hideEmptyFields) user.middleSchoolFavoriteSong else user.middleSchoolFavoriteSong.ifEmpty { "未填写" }}",
+                                    textColor,
+                                    maxLines = 3
+                                )
+                            }
                         }
                     }
                 }
@@ -810,7 +839,13 @@ private fun DetailInfoSection(
 }
 
 @Composable
-private fun DetailAboutMeBlock(body: String, textColor: Color, secondaryColor: Color) {
+private fun DetailAboutMeBlock(
+    body: String,
+    textColor: Color,
+    secondaryColor: Color,
+    isSelfProfile: Boolean,
+    gender: String
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -826,7 +861,7 @@ private fun DetailAboutMeBlock(body: String, textColor: Color, secondaryColor: C
         Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "关于我",
+                text = profileAboutTitle(isSelfProfile, gender),
                 color = textColor,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
@@ -876,9 +911,11 @@ private fun DetailLine(
 @Composable
 private fun PublishedServicesSection(
     displayName: String,
+    gender: String,
     services: List<Service>,
     averageRating: Double,
     reviewCount: Int,
+    isSelfProfile: Boolean,
     isDarkTheme: Boolean,
     onServiceClick: (String) -> Unit
 ) {
@@ -894,7 +931,7 @@ private fun PublishedServicesSection(
             color = if (isDarkTheme) Color(0xFF2D2D2D) else Color(0xFFE8E8E8)
         )
         Text(
-            text = "我发布的服务",
+            text = profilePublishedServicesTitle(isSelfProfile, gender),
             color = titleColor,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,

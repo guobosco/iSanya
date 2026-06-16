@@ -562,6 +562,89 @@
   line-height: 44rpx;
 }
 
+.bookingDateScroll {
+  margin-top: 18rpx;
+}
+
+.bookingDateRow {
+  display: flex;
+  align-items: stretch;
+  gap: 16rpx;
+  padding-right: 8rpx;
+}
+
+.bookingDateChip {
+  min-width: 190rpx;
+  padding: 22rpx 24rpx;
+  border-radius: 28rpx;
+  border: 2rpx solid #eeeeee;
+  background: #fbfbfb;
+  box-sizing: border-box;
+}
+
+.bookingDateChipActive {
+  border-color: rgba(224, 17, 95, 0.28);
+  background: #fff7fa;
+}
+
+.bookingDateChipLabel {
+  display: block;
+  color: #1b1b1b;
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 38rpx;
+}
+
+.bookingDateChipLabelActive {
+  color: #c81053;
+}
+
+.bookingDateChipDesc {
+  display: block;
+  margin-top: 6rpx;
+  color: #7a7a7a;
+  font-size: 23rpx;
+  line-height: 32rpx;
+}
+
+.bookingDateChipDescActive {
+  color: #9e4b69;
+}
+
+.bookingTimeWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 22rpx;
+}
+
+.bookingTimeChip {
+  min-width: 140rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 36rpx;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.bookingTimeChipActive {
+  background: #111111;
+}
+
+.bookingTimeChipText {
+  color: #242424;
+  font-size: 25rpx;
+  line-height: 34rpx;
+  font-weight: 500;
+}
+
+.bookingTimeChipTextActive {
+  color: #ffffff;
+}
+
 .bookingPickerList {
   margin-top: 18rpx;
   border-radius: 28rpx;

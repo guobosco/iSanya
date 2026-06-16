@@ -763,7 +763,6 @@ fun ExperienceDetailScreen(
                             serviceDeclarationsReaderBody = ServiceDeclarations.declarationReaderBody(
                                 emptyList(),
                             ),
-                            serviceAreaLocationRaw = null,
                         )
                         if (showHostReviewsOnDetail) {
                             ProfileReviewsSection(
