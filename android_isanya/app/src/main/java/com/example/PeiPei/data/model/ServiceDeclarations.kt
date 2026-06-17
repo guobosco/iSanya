@@ -5,10 +5,10 @@ package com.example.Lulu.data.model
 object ServiceDeclarations {
     /** 平台默认声明，始终展示且不可由用户删除。 */
     val BUILTIN: List<String> = listOf(
-        "沟通后前往指定的地点回合。",
-        "杜绝线下交易。",
-        "不提供非法涉黄服务。",
-        "人身安全由个人负责。",
+        "发布内容需真实、准确，不得虚假宣传。",
+        "价格与费用说明需清晰透明，额外收费需提前告知。",
+        "服务过程中需尊重用户隐私与人身安全。",
+        "涉及行程、接待或上门服务时需按约履约。"
     )
 
     private val builtinNormalized: Set<String> = BUILTIN.map { it.trim() }.toSet()
@@ -32,7 +32,7 @@ object ServiceDeclarations {
     /** 详情页副标题：是否含发布者补充条目。 */
     fun declarationSummaryExtraCount(extra: List<String>): String {
         val n = normalizeExtra(extra).size
-        return if (n == 0) "平台默认约定（4条）" else "平台约定 · 已补充 ${n} 条"
+        return if (n == 0) "平台约定 4 条" else "平台约定 4 条 · 已补充 ${n} 条"
     }
 
     /** 详情页弹层正文：编号列表。 */

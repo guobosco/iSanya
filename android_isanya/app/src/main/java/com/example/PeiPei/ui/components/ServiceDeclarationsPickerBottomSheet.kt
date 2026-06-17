@@ -106,6 +106,13 @@ fun ServiceDeclarationsPickerBottomSheet(
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "平台默认声明会自动展示，你也可以补充自己的接待约定和说明。",
+                                color = onSurfaceVariantColor,
+                                fontSize = 14.sp,
+                                lineHeight = 22.sp,
+                            )
                         }
                         IconButton(
                             onClick = onDismiss,

@@ -166,7 +166,7 @@ fun CreateServiceScreen(
     var showServiceFeaturePicker by remember { mutableStateOf(false) }
     var syncToSquare by remember { mutableStateOf(true) }
     var serviceImageUris by remember { mutableStateOf<List<String>>(emptyList()) }
-    val maxServiceImageCount = 16
+    val maxServiceImageCount = 18
     var keepOriginalQuality by remember { mutableStateOf(false) }
     var enableFullscreenPreview by remember { mutableStateOf(false) }
     var previewImageUri by remember { mutableStateOf<String?>(null) }
@@ -244,6 +244,96 @@ fun CreateServiceScreen(
 
     val formHints = remember(serviceCategory) {
         serviceCategory?.let { ServiceCategories.publishFormHints(it) }
+    }
+
+    val totalSections = 8
+    val completedSections = remember(
+        serviceImageUris,
+        title,
+        description,
+        serviceCategory,
+        priceText,
+        locationText,
+        serviceFeatureTags,
+        bookingTimeSlots,
+        bookingLeadHours,
+        bookingFutureOpenDays
+    ) {
+        var count = 0
+        if (serviceImageUris.isNotEmpty()) count += 1
+        if (title.isNotBlank()) count += 1
+        if (description.isNotBlank()) count += 1
+        if (serviceCategory != null) count += 1
+        if (priceText.isNotBlank()) count += 1
+        if (locationText.isNotBlank()) count += 1
+        if (serviceFeatureTags.isNotEmpty()) count += 1
+        if (
+            bookingTimeSlots.isNotEmpty() ||
+            bookingLeadHours != BookingTimeRangesCodec.DEFAULT_BOOKING_LEAD_HOURS ||
+            bookingFutureOpenDays != BookingTimeRangesCodec.DEFAULT_BOOKING_FUTURE_OPEN_DAYS
+        ) {
+            count += 1
+        }
+        count
+    }
+    val progressRatio = (completedSections.toFloat() / totalSections.toFloat()).coerceIn(0f, 1f)
+    val pendingProgressItems = remember(
+        serviceImageUris,
+        title,
+        description,
+        serviceCategory,
+        priceText,
+        locationText,
+        serviceFeatureTags,
+        bookingTimeSlots,
+        bookingLeadHours,
+        bookingFutureOpenDays
+    ) {
+        buildList {
+            if (serviceImageUris.isEmpty()) add("上传封面")
+            if (title.isBlank()) add("填写标题")
+            if (description.isBlank()) add("补充介绍")
+            if (serviceCategory == null) add("选择类别")
+            if (priceText.isBlank()) add("设置价格")
+            if (
+                bookingTimeSlots.isEmpty() &&
+                bookingLeadHours == BookingTimeRangesCodec.DEFAULT_BOOKING_LEAD_HOURS &&
+                bookingFutureOpenDays == BookingTimeRangesCodec.DEFAULT_BOOKING_FUTURE_OPEN_DAYS
+            ) add("设置时间")
+            if (locationText.isBlank()) add("选择城市")
+            if (serviceFeatureTags.isEmpty()) add("补充特点")
+        }
+    }
+    val progressFocus = remember(pendingProgressItems) {
+        pendingProgressItems.take(2).joinToString("、")
+    }
+    val progressTitle = remember(completedSections, pendingProgressItems, progressFocus) {
+        when {
+            pendingProgressItems.isEmpty() ->
+                "信息已经比较完整，可以准备发布了"
+            completedSections <= 1 ->
+                "先上传封面，再写标题和简介"
+            completedSections <= 3 ->
+                "继续完成$progressFocus"
+            completedSections <= 5 ->
+                "再补充$progressFocus"
+            else ->
+                "离发布不远了，再完善$progressFocus"
+        }
+    }
+    val progressSubtitle = remember(completedSections, pendingProgressItems) {
+        when {
+            pendingProgressItems.isEmpty() ->
+                "发布前再核对价格、时间、地点和声明是否准确，减少后续来回确认。"
+            completedSections <= 1 ->
+                "先把最容易被看到的内容补齐，用户会更快看懂你提供的内容。"
+            completedSections <= 3 ->
+                "把基础信息写清楚，用户浏览时会更容易判断是否适合自己。"
+            completedSections <= 5 ->
+                "价格、时间和地点越清晰，越能减少后续沟通成本。"
+            else ->
+                "把最后几项补齐，用户看到后会更容易直接预约或下单。"
+        }
     }
 
     // 前置类别弹窗关闭后再聚焦描述（新建）
@@ -531,7 +621,7 @@ fun CreateServiceScreen(
         }
 
         if (serviceImageUris.isEmpty()) {
-            errorMessage = "请至少上传1张服务图片"
+            errorMessage = "请至少上传 1 张封面图"
             return
         }
 
@@ -592,6 +682,125 @@ fun CreateServiceScreen(
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = cardColor),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    color = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFF9F1F4),
+                                    shape = RoundedCornerShape(999.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Settings,
+                                            contentDescription = null,
+                                            tint = themeAccentRed,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Text(
+                                            text = "已完成 $completedSections/$totalSections",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isDarkTheme) Color(0xFFE6D5DD) else Color(0xFF6E5C65)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = progressTitle,
+                                    fontSize = 20.sp,
+                                    lineHeight = 28.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = progressSubtitle,
+                                    fontSize = 14.sp,
+                                    lineHeight = 22.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "${(progressRatio * 100).toInt()}%",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = themeAccentRed
+                                )
+                                Text(
+                                    text = "进度",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        LinearProgressIndicator(
+                            progress = { progressRatio },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(RoundedCornerShape(999.dp)),
+                            color = themeAccentRed,
+                            trackColor = if (isDarkTheme) Color(0xFF333333) else Color(0xFFF1E5EA)
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SummaryChip(
+                                text = serviceCategory ?: "待选类别",
+                                selected = serviceCategory != null,
+                                accentColor = themeAccentRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            SummaryChip(
+                                text = if (serviceImageUris.isEmpty()) "待传图片" else "已传 ${serviceImageUris.size} 张",
+                                selected = serviceImageUris.isNotEmpty(),
+                                accentColor = themeAccentRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                            SummaryChip(
+                                text = if (priceText.isBlank()) "待设价格" else "已设价格",
+                                selected = priceText.isNotBlank(),
+                                accentColor = themeAccentRed,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = cardColor),
                     shape = RoundedCornerShape(18.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
@@ -600,6 +809,23 @@ fun CreateServiceScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
+                        Text(
+                            text = "封面与文案",
+                            fontSize = 22.sp,
+                            lineHeight = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "补充图片、标题和核心介绍，让用户在几秒内看懂你的内容。",
+                            fontSize = 14.sp,
+                            lineHeight = 22.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         val imageItemSize = 78.dp
                         val imageItemSpacing = 8.dp
                         val wechatStyleAccent = Color(0xFFE0115F)
@@ -719,6 +945,15 @@ fun CreateServiceScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        Text(
+                            text = "至少上传 1 张图片，最多 18 张；第一张会作为封面。",
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp,
+                            color = placeholderColor
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         BasicTextField(
                             value = title,
                             onValueChange = {
@@ -740,7 +975,7 @@ fun CreateServiceScreen(
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (title.isEmpty()) {
                                         Text(
-                                            text = formHints?.titlePlaceholder ?: "添加标题",
+                                            text = formHints?.titlePlaceholder ?: "用一句话概括你的服务",
                                             fontSize = 20.sp,
                                             lineHeight = 26.sp,
                                             color = placeholderColor.copy(alpha = 0.7f),
@@ -781,7 +1016,7 @@ fun CreateServiceScreen(
                                     if (description.isEmpty()) {
                                         Text(
                                             text = formHints?.descriptionPlaceholder
-                                                ?: "详细介绍服务内容、流程和亮点，帮助用户快速了解并下单",
+                                                ?: "详细介绍服务内容、流程和亮点，帮助用户快速了解并下单。",
                                             fontSize = 15.sp,
                                             lineHeight = 22.sp,
                                             color = placeholderColor.copy(alpha = 0.7f)
@@ -905,9 +1140,9 @@ fun CreateServiceScreen(
                         HorizontalDivider(color = dividerColor, modifier = Modifier.padding(start = 16.dp))
                         val extraDeclCount = extraServiceDeclarations.count { it.isNotBlank() }
                         val declarationsSummary = if (extraDeclCount == 0) {
-                            "平台约定4条"
+                            "平台约定 4 条"
                         } else {
-                            "平台约定4条 · 已补充${extraDeclCount}条"
+                            "平台约定 4 条 · 已补充 ${extraDeclCount} 条"
                         }
                         PublishOptionRow(
                             label = "服务声明",
@@ -1270,7 +1505,7 @@ fun CreateServiceScreen(
                                         } else if (pickerSelectedUris.size < maxServiceImageCount) {
                                             pickerSelectedUris = pickerSelectedUris + imageUri
                                         } else {
-                                            android.widget.Toast.makeText(context, "最多上传16张图片", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, "最多上传18张图片", android.widget.Toast.LENGTH_SHORT).show()
                                         }
                                     }
                             ) {
@@ -1783,5 +2018,35 @@ fun SettingsRow(
             modifier = Modifier.weight(1f)
         )
         trailing?.invoke()
+    }
+}
+
+@Composable
+private fun SummaryChip(
+    text: String,
+    selected: Boolean,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (selected) accentColor.copy(alpha = 0.12f) else Color.Transparent)
+            .border(
+                width = 1.dp,
+                color = if (selected) accentColor.copy(alpha = 0.28f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
