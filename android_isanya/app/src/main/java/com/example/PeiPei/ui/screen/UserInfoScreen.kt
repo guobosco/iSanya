@@ -16,11 +16,26 @@ import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
@@ -74,6 +90,8 @@ import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.model.User
 import com.example.Lulu.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.Lulu.ui.components.EditDialog
@@ -192,6 +210,12 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
     
     var showFullScreenAvatar by remember { mutableStateOf(false) }
     val view = LocalView.current
+    val scrollState = rememberScrollState()
+    var publishEntryCompact by remember { mutableStateOf(false) }
+    var publishEntryVisible by remember { mutableStateOf(false) }
+    var lastScrollOffset by remember { mutableStateOf(0) }
+    var publishEntryResetJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
 
     if (!view.isInEditMode) {
         SideEffect {
@@ -209,26 +233,103 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
         )
     }
 
+    LaunchedEffect(Unit) {
+        delay(280)
+        publishEntryVisible = true
+    }
+
+    LaunchedEffect(scrollState.value, publishEntryVisible) {
+        if (!publishEntryVisible) {
+            lastScrollOffset = scrollState.value
+            return@LaunchedEffect
+        }
+
+        val delta = scrollState.value - lastScrollOffset
+        if (delta > 20) {
+            publishEntryCompact = true
+        } else if (delta < -8 || scrollState.value < 12) {
+            publishEntryCompact = false
+        }
+
+        lastScrollOffset = scrollState.value
+        publishEntryResetJob?.cancel()
+        publishEntryResetJob = scope.launch {
+            delay(1100)
+            publishEntryCompact = false
+        }
+    }
+
     Scaffold(
         containerColor = backgroundColor,
         // 与 MainScreen / MessagesScreen 一致：不把状态栏 inset 叠进 content，避免与下方 statusBarsPadding 重复导致整体偏下
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = {
-            Surface(
-                color = Color(0xFFF7F7F7),
-                shape = RoundedCornerShape(22.dp),
-                shadowElevation = 0.dp,
-                tonalElevation = 0.dp,
+            val fabPulseTransition = rememberInfiniteTransition(label = "profile_publish_pulse")
+            val pulseScale by fabPulseTransition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.03f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 2200),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "profile_publish_pulse_scale"
+            )
+            val baseScale by animateFloatAsState(
+                targetValue = when {
+                    !publishEntryVisible -> 0.92f
+                    publishEntryCompact -> 1f
+                    else -> pulseScale
+                },
+                animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
+                label = "profile_publish_base_scale"
+            )
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = ProfileMinePageCardHorizontalInset)
                     .padding(bottom = 20.dp)
             ) {
-                Row(
+                AnimatedVisibility(
+                    visible = publishEntryVisible,
+                    enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
+                        slideInVertically(
+                            initialOffsetY = { it / 3 },
+                            animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f)
+                        ),
+                    exit = fadeOut(animationSpec = tween(durationMillis = 160)) +
+                        slideOutVertically(targetOffsetY = { it / 3 }),
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                ) {
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val pressed by interactionSource.collectIsPressedAsState()
+                    val shape = if (publishEntryCompact) CircleShape else RoundedCornerShape(28.dp)
+
+                    Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
+                        .shadow(
+                            elevation = if (pressed) 14.dp else 24.dp,
+                            shape = shape,
+                            ambientColor = Color(0x331A0A17),
+                            spotColor = Color(0x551A0A17)
+                        )
+                        .clip(shape)
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(Color(0xFFE0115F), Color(0xFFB00D4C))
+                            ),
+                            shape = shape
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.22f),
+                            shape = shape
+                        )
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null
+                        ) {
                             if (!isLoggedIn) {
                                 navigateToLogin()
                             } else {
@@ -237,30 +338,61 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                                 }
                             }
                         }
-                        .padding(horizontal = 20.dp, vertical = 18.dp),
+                        .graphicsLayer {
+                            val pressScale = if (pressed) 0.97f else 1f
+                            scaleX = baseScale * pressScale
+                            scaleY = baseScale * pressScale
+                        }
+                        .animateContentSize(
+                            animationSpec = spring(dampingRatio = 0.86f, stiffness = 500f)
+                        )
+                        .padding(
+                            start = if (publishEntryCompact) 10.dp else 12.dp,
+                            end = if (publishEntryCompact) 10.dp else 18.dp,
+                            top = 10.dp,
+                            bottom = 10.dp
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(if (publishEntryCompact) 0.dp else 14.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Storefront,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = Color.Black
-                    )
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "发布「服务」或「体验」",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF202020)
-                        )
-                        Text(
-                            text = "填写表单信息即可上架接单",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = Color(0xFF717171),
-                            lineHeight = 18.sp
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.16f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "+",
+                                color = Color.White,
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        if (!publishEntryCompact) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "发布服务或体验",
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "填写表单后即可快速上架接单",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White.copy(alpha = 0.82f),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ArrowForwardIos,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color.White.copy(alpha = 0.92f)
+                            )
+                        }
                     }
                 }
             }
@@ -271,7 +403,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                 .fillMaxSize()
                 .background(pureWhite)
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             val textPrimary = Color(0xFF202020)
             val textSecondary = Color(0xFF666666)
