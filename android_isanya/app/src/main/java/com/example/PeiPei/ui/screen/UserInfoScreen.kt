@@ -30,6 +30,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -106,6 +107,7 @@ import com.example.Lulu.ui.components.IdentityVerificationCallout
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.view.WindowCompat
 
@@ -300,7 +302,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                         ),
                     exit = fadeOut(animationSpec = tween(durationMillis = 160)) +
                         slideOutVertically(targetOffsetY = { it / 3 }),
-                    modifier = Modifier.align(Alignment.BottomEnd)
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     val interactionSource = remember { MutableInteractionSource() }
                     val pressed by interactionSource.collectIsPressedAsState()
@@ -309,7 +311,7 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                     Row(
                     modifier = Modifier
                         .shadow(
-                            elevation = if (pressed) 14.dp else 24.dp,
+                            elevation = if (pressed) 12.dp else 16.dp,
                             shape = shape,
                             ambientColor = Color(0x331A0A17),
                             spotColor = Color(0x551A0A17)
@@ -351,7 +353,9 @@ fun UserInfoScreen(navController: NavController, showBackButton: Boolean = true)
                             end = if (publishEntryCompact) 10.dp else 18.dp,
                             top = 10.dp,
                             bottom = 10.dp
-                        ),
+                        )
+                        .widthIn(min = 56.dp)
+                        .wrapContentWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(if (publishEntryCompact) 0.dp else 14.dp)
                 ) {
