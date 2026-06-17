@@ -49,7 +49,7 @@ data class User(
     val isPhoneVerified: Boolean = false, // 手机号是否已验证
     @SerializedName("is_profile_completed")
     val isProfileCompleted: Boolean = false, // 个人资料是否已完善
-    val signature: String = "", // 个性签名
+    val signature: String = "", // 自我介绍（沿用 signature 字段）
     val memo: String = "", // 备忘
     val gender: String = "", // 性别
     val region: String = "", // 地区
@@ -116,6 +116,16 @@ fun User.withAvatarIncludedInPhotoWall(
         profileImageUrls = mergedPhotoWallUrls,
         updatedAt = System.currentTimeMillis()
     )
+}
+
+fun User.hasCompletedRequiredProfileFields(): Boolean {
+    return gender.trim().isNotEmpty() &&
+        region.trim().isNotEmpty() &&
+        photoUrl.trim().isNotEmpty()
+}
+
+fun User.hasCompletedOnboardingProfile(): Boolean {
+    return name.trim().isNotEmpty() && hasCompletedRequiredProfileFields()
 }
 
 /** 体重展示为整数或一位小数 + kg */

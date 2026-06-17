@@ -22,8 +22,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.hasCompletedOnboardingProfile
+import com.example.Lulu.ui.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -62,7 +63,11 @@ fun WeChatBindPhoneScreen(navController: NavController) {
                                 updatedAt = System.currentTimeMillis()
                             ))
                         }
-                        navController.navigate(Screen.CompleteProfile.route)
+                        if (currentUser.name.isBlank()) {
+                            navController.navigate(Screen.CompleteName.route)
+                        } else {
+                            navController.navigate(Screen.CompleteProfile.route)
+                        }
                     }) {
                         Text("跳过")
                     }
@@ -177,8 +182,10 @@ fun WeChatBindPhoneScreen(navController: NavController) {
                         sharedPrefs.edit().putString("wechat_bind_phone", phoneNumber).apply()
                         
                         Toast.makeText(context, "绑定成功", Toast.LENGTH_SHORT).show()
-                        if (updatedUser.isProfileCompleted) {
+                        if (updatedUser.hasCompletedOnboardingProfile()) {
                             navController.navigate(Screen.Home.route) { popUpTo(0) { inclusive = true } }
+                        } else if (updatedUser.name.isBlank()) {
+                            navController.navigate(Screen.CompleteName.route)
                         } else {
                             navController.navigate(Screen.CompleteProfile.route)
                         }

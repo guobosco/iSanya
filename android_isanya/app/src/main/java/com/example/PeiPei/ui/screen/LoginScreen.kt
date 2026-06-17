@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.Lulu.R
+import com.example.Lulu.data.model.hasCompletedOnboardingProfile
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.data.repository.LuluRepository
 import com.example.Lulu.data.model.User
@@ -241,13 +242,10 @@ fun LoginScreen(navController: NavController, initialPhone: String? = null) {
                                         Toast.makeText(context, "登录成功", Toast.LENGTH_SHORT).show()
                                         repository.syncAfterLogin(context)
 
-                                        // Check if profile is actually completed (flag or sufficient data)
-                                        // Gender and Region are considered minimum required fields
-                                        val isProfileReady = user.isProfileCompleted ||
-                                            (user.gender.isNotEmpty() && user.region.isNotEmpty())
-                                            
-                                        if (isProfileReady) {
+                                        if (user.hasCompletedOnboardingProfile()) {
                                             navController.navigate(Screen.Home.route) { popUpTo(0) { inclusive = true } }
+                                        } else if (user.name.isBlank()) {
+                                            navController.navigate(Screen.CompleteName.route)
                                         } else {
                                             navController.navigate(Screen.CompleteProfile.route)
                                         }

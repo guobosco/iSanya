@@ -241,6 +241,18 @@ fun MessageThreadScreen(
                 serviceIdFromMessages.isNotEmpty()
         )
     }
+    val serviceCandidates = remember(services) {
+        services.sortedByDescending { it.updatedAt }
+    }
+    val pinnedServiceId = remember(decodedContextServiceId, isHostProfileChatEntry) {
+        decodedContextServiceId.takeIf { it.isNotEmpty() && !isHostProfileChatEntry }.orEmpty()
+    }
+    val pinnedService = remember(pinnedServiceId, serviceCandidates) {
+        serviceCandidates.firstOrNull { it.id == pinnedServiceId }
+    }
+    val showPinnedServiceCard = remember(pinnedServiceId) {
+        pinnedServiceId.isNotEmpty()
+    }
 
     fun openLinkedListingFromMeta() {
         when {
@@ -270,10 +282,6 @@ fun MessageThreadScreen(
     val imeBottomPx = WindowInsets.ime.getBottom(density)
     if (imeBottomPx > 0) {
         lastImeHeightDp = with(density) { imeBottomPx.toDp() }
-    }
-
-    val serviceCandidates = remember(services) {
-        services.sortedByDescending { it.updatedAt }
     }
 
     suspend fun sendMessage(
@@ -487,20 +495,36 @@ fun MessageThreadScreen(
                 profileNavigationEnabled = !peerId.isNullOrBlank()
             )
 
+            if (showPinnedServiceCard) {
+                PinnedServiceContextCard(
+                    service = pinnedService,
+                    fallbackTitle = decodedServiceTitle,
+                    inquirySummary = inquirySummary,
+                    onOpen = ::openLinkedListingFromMeta
+                )
+            }
+
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
                 reverseLayout = false,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 14.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 0.dp,
+                    top = if (showPinnedServiceCard) 12.dp else 14.dp,
+                    end = 0.dp,
+                    bottom = 14.dp
+                )
             ) {
-                item {
-                    MessageServiceMetaCard(
-                        inquiryDate = inquiryDate,
-                        inquirySummary = inquirySummary,
-                        showConsultationSummary = !isHostProfileChatEntry,
-                        showServiceLink = showServiceLink,
-                        onShowService = ::openLinkedListingFromMeta
-                    )
+                if (!showPinnedServiceCard) {
+                    item {
+                        MessageServiceMetaCard(
+                            inquiryDate = inquiryDate,
+                            inquirySummary = inquirySummary,
+                            showConsultationSummary = !isHostProfileChatEntry,
+                            showServiceLink = showServiceLink,
+                            onShowService = ::openLinkedListingFromMeta
+                        )
+                    }
                 }
                 items(messages, key = { it.id }) { message ->
                     MessageBubbleRow(
@@ -584,6 +608,124 @@ fun MessageThreadScreen(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun PinnedServiceContextCard(
+    service: Service?,
+    fallbackTitle: String,
+    inquirySummary: String,
+    onOpen: () -> Unit
+) {
+    val title = service?.title?.trim().orEmpty().ifBlank {
+        fallbackTitle.trim().ifBlank { "当前咨询服务" }
+    }
+    val coverImage = service?.coverImageUrl?.takeIf { it.isNotBlank() }
+        ?: service?.imageUrls?.firstOrNull().orEmpty()
+    val summary = buildList {
+        val price = service?.priceText?.trim().orEmpty()
+        if (price.isNotEmpty()) {
+            add(price)
+        } else {
+            val priceBasis = service?.priceBasisText?.trim().orEmpty()
+            if (priceBasis.isNotEmpty()) {
+                add(priceBasis)
+            }
+        }
+        val location = service?.location?.trim().orEmpty()
+        if (location.isNotEmpty()) {
+            add(com.example.Lulu.util.ServiceLocationPolygonCodec.displayLine(location))
+        }
+    }.joinToString(" · ")
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .clickable(onClick = onOpen),
+        color = Color.White,
+        shape = RoundedCornerShape(20.dp),
+        shadowElevation = 10.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (coverImage.isNotBlank()) {
+                AsyncImage(
+                    model = coverImage,
+                    contentDescription = title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(68.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                )
+            } else {
+                Surface(
+                    color = Color(0xFFFFF0E4),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(68.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = "服务卡片",
+                            tint = Color(0xFFFF7A00)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "当前咨询服务",
+                    color = Color(0xFF8A8A8A),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = title,
+                    color = Color(0xFF222222),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (summary.isNotBlank()) {
+                    Text(
+                        text = summary,
+                        color = Color(0xFF666666),
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else if (inquirySummary.isNotBlank()) {
+                    Text(
+                        text = inquirySummary,
+                        color = Color(0xFF666666),
+                        fontSize = 12.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "查看",
+                color = Color(0xFF3B3B3B),
+                fontSize = 13.sp,
+                textDecoration = TextDecoration.Underline
+            )
         }
     }
 }

@@ -2,49 +2,46 @@
 
 package com.example.Lulu.ui.screen
 
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ArrowForwardIos
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.Lulu.data.local.AppDataStore
-import com.example.Lulu.data.model.withAvatarIncludedInPhotoWall
-import com.example.Lulu.ui.navigation.Screen
-import com.example.Lulu.ui.components.RegionPickerDialog
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.net.Uri
 import coil.compose.AsyncImage
+import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.hasCompletedOnboardingProfile
+import com.example.Lulu.data.model.withAvatarIncludedInPhotoWall
 import com.example.Lulu.data.remote.RetrofitClient
-import androidx.compose.ui.layout.ContentScale
-import kotlinx.coroutines.launch
+import com.example.Lulu.ui.components.RegionPickerDialog
+import com.example.Lulu.ui.navigation.Screen
 import com.yalantis.ucrop.UCrop
-import android.content.Intent
-import android.app.Activity
-import androidx.activity.result.contract.ActivityResultContract
-import androidx.compose.ui.graphics.toArgb
 import java.io.File
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +59,7 @@ fun CompleteProfileScreen(navController: NavController) {
     
     val currentUser = AppDataStore.currentUser.collectAsState().value
     val avatarInitial = currentUser.name.trim().firstOrNull()?.toString() ?: "?"
+    val hasAvatar = currentUser.photoUrl.isNotBlank()
     
     var gender by remember { mutableStateOf(currentUser.gender) }
     var region by remember { mutableStateOf(currentUser.region) }
@@ -148,20 +146,6 @@ fun CompleteProfileScreen(navController: NavController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("完善资料", fontSize = 16.sp) },
-                actions = {
-                    TextButton(
-                        onClick = {
-                        dismissKeyboard()
-                        // 跳过 -> 去首页
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(0) { inclusive = true } // 清空所有栈
-                        }
-                        },
-                        enabled = !isSaving
-                    ) {
-                        Text("跳过")
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor)
             )
         },
@@ -230,7 +214,16 @@ fun CompleteProfileScreen(navController: NavController) {
                     )
                 }
             }
-            
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = if (hasAvatar) "头像已上传" else "头像为必填项，请先上传",
+                fontSize = 12.sp,
+                color = if (hasAvatar) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
             Spacer(modifier = Modifier.height(32.dp))
             
             // Gender - ReadOnly, Click to show dialog
@@ -244,7 +237,7 @@ fun CompleteProfileScreen(navController: NavController) {
                     readOnly = true, // 禁止输入，只读
                     shape = RoundedCornerShape(8.dp),
                     trailingIcon = {
-                        Icon(Icons.Default.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledTextColor = MaterialTheme.colorScheme.onSurface,
@@ -273,7 +266,7 @@ fun CompleteProfileScreen(navController: NavController) {
                     readOnly = true, // 禁止输入
                     shape = RoundedCornerShape(8.dp),
                     trailingIcon = {
-                        Icon(Icons.Default.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForwardIos, contentDescription = null, modifier = Modifier.size(16.dp))
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         disabledTextColor = MaterialTheme.colorScheme.onSurface,
@@ -293,19 +286,26 @@ fun CompleteProfileScreen(navController: NavController) {
             OutlinedTextField(
                 value = signature,
                 onValueChange = { 
-                    if (it.length <= 30) {
+                    if (it.length <= 500) {
                         signature = it 
                     }
                 },
-                label = { Text("个性签名") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
+                label = { Text("自我介绍") },
+                placeholder = { Text("简单介绍一下自己（选填）") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 132.dp),
+                minLines = 4,
+                maxLines = 8,
+                singleLine = false,
                 shape = RoundedCornerShape(8.dp),
                 supportingText = {
-                     Text("${signature.length}/30")
-                },
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { dismissKeyboard() })
+                    Text(
+                        text = "${signature.length}/500",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End
+                    )
+                }
             )
             
             Spacer(modifier = Modifier.height(32.dp))
@@ -313,8 +313,16 @@ fun CompleteProfileScreen(navController: NavController) {
             Button(
                 onClick = {
                     dismissKeyboard()
-                    if (gender.isEmpty() || region.isEmpty()) {
-                        Toast.makeText(context, "请完善性别和地区信息", Toast.LENGTH_SHORT).show()
+                    if (!hasAvatar) {
+                        Toast.makeText(context, "请先上传头像", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (gender.isBlank()) {
+                        Toast.makeText(context, "请选择性别", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    if (region.isBlank()) {
+                        Toast.makeText(context, "请选择地区", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
                     coroutineScope.launch {
@@ -324,17 +332,21 @@ fun CompleteProfileScreen(navController: NavController) {
                             gender = gender,
                             region = region,
                             signature = signature,
-                            isProfileCompleted = true,
                             updatedAt = System.currentTimeMillis()
                         )
+                        val completedUser = updatedUser.copy(
+                            isProfileCompleted = updatedUser.hasCompletedOnboardingProfile()
+                        )
                         val repository = AppDataStore.getRepository()
-                        val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)
+                        val result = repository?.syncCurrentUserProfile(completedUser) ?: Result.success(completedUser)
                         result.onSuccess { savedUser ->
                             AppDataStore.replaceCurrentUser(savedUser)
                             val sharedPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
                             val phone = savedUser.phoneNumber
                             if (phone.isNotEmpty()) {
-                                sharedPrefs.edit().putBoolean("is_profile_completed_$phone", true).apply()
+                                sharedPrefs.edit()
+                                    .putBoolean("is_profile_completed_$phone", savedUser.hasCompletedOnboardingProfile())
+                                    .apply()
                             }
                             Toast.makeText(context, "资料设置成功", Toast.LENGTH_SHORT).show()
                             navController.navigate(Screen.Home.route) {

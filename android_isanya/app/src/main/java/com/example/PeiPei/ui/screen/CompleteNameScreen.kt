@@ -35,27 +35,6 @@ fun CompleteNameScreen(navController: NavController) {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text("完善资料 (1/2)", fontSize = 16.sp) },
-                actions = {
-                    TextButton(onClick = {
-                        coroutineScope.launch {
-                            isSaving = true
-                            val user = AppDataStore.currentUser.value
-                            val defaultName = if (user.peiPeiId.isNotEmpty()) user.peiPeiId else "爱野_${user.phoneNumber}"
-                            val updatedUser = user.copy(name = defaultName, updatedAt = System.currentTimeMillis())
-                            val repository = AppDataStore.getRepository()
-                            val result = repository?.syncCurrentUserProfile(updatedUser) ?: Result.success(updatedUser)
-                            result.onSuccess { savedUser ->
-                                AppDataStore.replaceCurrentUser(savedUser)
-                                navController.navigate(Screen.CompleteProfile.route)
-                            }.onFailure { error ->
-                                Toast.makeText(context, error.message ?: "昵称保存失败，请重试", Toast.LENGTH_SHORT).show()
-                            }
-                            isSaving = false
-                        }
-                    }) {
-                        Text("跳过")
-                    }
-                },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = backgroundColor)
             )
         },
