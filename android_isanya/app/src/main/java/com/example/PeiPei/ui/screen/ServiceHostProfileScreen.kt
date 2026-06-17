@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,7 +23,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
@@ -111,7 +111,83 @@ import com.example.Lulu.ui.viewmodel.ServiceHostProfileViewModel
 
 /** 主资料详情页 LazyColumn 与底栏按钮相对屏幕左右的留白（与「我的」页卡片边距对齐） */
 private val ServiceHostProfileHorizontalInset = 24.dp
-private val ProfilePhotoWallImageSpacing = 10.dp
+private val ProfilePhotoWallImageSpacing = 4.dp
+private val ProfilePhotoWallScreenEdgeInset = 8.dp
+private val ProfilePhotoWallHorizontalExtension =
+    ServiceHostProfileHorizontalInset - ProfilePhotoWallScreenEdgeInset
+
+private enum class PhotoWallRowType { COLLAGE, PAIR, SINGLE }
+
+private data class PhotoWallRowSpec(
+    val type: PhotoWallRowType,
+    val photoUrls: List<String>,
+    val largeOnStart: Boolean = true
+)
+
+private fun buildPhotoWallRowSpecs(photoUrls: List<String>): List<PhotoWallRowSpec> {
+    if (photoUrls.isEmpty()) return emptyList()
+    val rows = mutableListOf<PhotoWallRowSpec>()
+    var index = 0
+    var largeOnStart = true
+
+    while (index < photoUrls.size) {
+        val remaining = photoUrls.size - index
+        when {
+            remaining >= 5 -> {
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.COLLAGE,
+                    photoUrls = photoUrls.subList(index, index + 3),
+                    largeOnStart = largeOnStart
+                )
+                index += 3
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.PAIR,
+                    photoUrls = photoUrls.subList(index, index + 2)
+                )
+                index += 2
+                largeOnStart = !largeOnStart
+            }
+            remaining == 4 -> {
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.COLLAGE,
+                    photoUrls = photoUrls.subList(index, index + 3),
+                    largeOnStart = largeOnStart
+                )
+                index += 3
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.SINGLE,
+                    photoUrls = photoUrls.subList(index, index + 1)
+                )
+                index += 1
+                largeOnStart = !largeOnStart
+            }
+            remaining == 3 -> {
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.COLLAGE,
+                    photoUrls = photoUrls.subList(index, index + 3),
+                    largeOnStart = largeOnStart
+                )
+                index += 3
+                largeOnStart = !largeOnStart
+            }
+            remaining == 2 -> {
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.PAIR,
+                    photoUrls = photoUrls.subList(index, index + 2)
+                )
+                index += 2
+            }
+            else -> {
+                rows += PhotoWallRowSpec(
+                    type = PhotoWallRowType.SINGLE,
+                    photoUrls = photoUrls.subList(index, index + 1)
+                )
+                index += 1
+            }
+        }
+    }
+    return rows
+}
 
 private fun thirdPersonPronoun(gender: String): String = when (gender.trim()) {
     "女" -> "她"
@@ -137,8 +213,7 @@ private fun platformYearsOnLulu(createdAt: Long): String {
 
 @OptIn(
     ExperimentalMaterial3Api::class,
-    ExperimentalFoundationApi::class,
-    ExperimentalLayoutApi::class
+    ExperimentalFoundationApi::class
 )
 @Composable
 fun ServiceHostProfileScreen(
@@ -174,7 +249,8 @@ fun ServiceHostProfileScreen(
     }
 
     val user = userState!!
-    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+    var fullScreenImageUrls by remember { mutableStateOf<List<String>>(emptyList()) }
+    var fullScreenImageIndex by rememberSaveable { mutableStateOf(0) }
 
     val isDarkTheme = isSystemInDarkTheme()
     val pageColor = if (isDarkTheme) Color(0xFF111111) else Color(0xFFFFFFFF)
@@ -186,10 +262,12 @@ fun ServiceHostProfileScreen(
     var showAllReviewsSheet by remember { mutableStateOf(false) }
     val allReviewsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    if (!fullScreenImageUrl.isNullOrEmpty()) {
+    if (fullScreenImageUrls.isNotEmpty()) {
         FullScreenImageDialog(
-            imageUrl = fullScreenImageUrl.orEmpty(),
-            onDismiss = { fullScreenImageUrl = null }
+            imageUrl = fullScreenImageUrls.getOrNull(fullScreenImageIndex).orEmpty(),
+            imageUrls = fullScreenImageUrls,
+            initialPage = fullScreenImageIndex,
+            onDismiss = { fullScreenImageUrls = emptyList() }
         )
     }
 
@@ -253,7 +331,8 @@ fun ServiceHostProfileScreen(
                     isDarkTheme = isDarkTheme,
                     onAvatarClick = {
                         if (user.photoUrl.isNotEmpty()) {
-                            fullScreenImageUrl = user.photoUrl
+                            fullScreenImageUrls = listOf(user.photoUrl)
+                            fullScreenImageIndex = 0
                         }
                     }
                 )
@@ -280,7 +359,11 @@ fun ServiceHostProfileScreen(
                     isSelfProfile = isSelfProfile,
                     displayName = user.name.ifEmpty { "Ta" },
                     isDarkTheme = isDarkTheme,
-                    onPhotoClick = { photoUrl -> fullScreenImageUrl = photoUrl }
+                    onPhotoClick = { photoUrl ->
+                        val normalizedUrls = user.profileImageUrls.filter { it.isNotBlank() }
+                        fullScreenImageUrls = normalizedUrls.ifEmpty { listOf(photoUrl) }
+                        fullScreenImageIndex = normalizedUrls.indexOf(photoUrl).takeIf { it >= 0 } ?: 0
+                    }
                 )
             }
 
@@ -401,7 +484,6 @@ private fun ServiceHostProfileChatBottomBar(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PhotoWallSection(
     photoUrls: List<String>,
@@ -412,13 +494,13 @@ private fun PhotoWallSection(
 ) {
     val titleColor = if (isDarkTheme) Color.White else Color(0xFF222222)
     val mutedColor = if (isDarkTheme) Color(0xFFA8A8A8) else Color(0xFF777777)
-    val sectionCardColor = if (isDarkTheme) Color(0xFF1B1B1B) else Color(0xFFFFFFFF)
     val dividerColor = if (isDarkTheme) Color(0xFF2D2D2D) else Color(0xFFE8E8E8)
     val emptyText = if (isSelfProfile) {
         "还没有上传照片，去编辑资料添加几张更容易让别人了解你。"
     } else {
         "${displayName} 还没有公开照片。"
     }
+    val wallRows = remember(photoUrls) { buildPhotoWallRowSpecs(photoUrls) }
 
     Column {
         Divider(
@@ -441,37 +523,93 @@ private fun PhotoWallSection(
                 lineHeight = 20.sp
             )
         } else {
-            Surface(
-                color = sectionCardColor,
-                shape = RoundedCornerShape(16.dp),
-                shadowElevation = if (isDarkTheme) 1.dp else 0.dp,
-                tonalElevation = 0.dp
-            ) {
-                BoxWithConstraints(
+            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                val wallWidth = maxWidth + ProfilePhotoWallHorizontalExtension * 2
+                val wallUnit = (wallWidth - ProfilePhotoWallImageSpacing * 2) / 3
+                val collageLargeWidth = wallUnit * 2 + ProfilePhotoWallImageSpacing
+                val collageSmallWidth = wallUnit
+                val collageSmallHeight = wallUnit * 1.08f
+                val collageLargeHeight = collageSmallHeight * 2 + ProfilePhotoWallImageSpacing
+                val pairItemWidth = (wallWidth - ProfilePhotoWallImageSpacing) / 2
+                val pairItemHeight = pairItemWidth * 0.82f
+                val singleItemHeight = wallWidth * 0.72f
+
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp)
+                        .requiredWidth(wallWidth)
+                        .offset(x = -ProfilePhotoWallHorizontalExtension),
+                    verticalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing)
                 ) {
-                    val itemSize = (maxWidth - ProfilePhotoWallImageSpacing * 2) / 3
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing),
-                        verticalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        photoUrls.forEach { photoUrl ->
-                            Surface(
-                                modifier = Modifier
-                                    .size(itemSize)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .clickable { onPhotoClick(photoUrl) },
-                                shape = RoundedCornerShape(14.dp),
-                                color = if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE8E8E8)
-                            ) {
-                                AsyncImage(
-                                    model = RetrofitClient.normalizeBackendMediaUrlForDisplay(photoUrl),
-                                    contentDescription = "资料照片",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                    wallRows.forEach { row ->
+                        when (row.type) {
+                            PhotoWallRowType.COLLAGE -> {
+                                val largePhoto = row.photoUrls.first()
+                                val stackedPhotos = row.photoUrls.drop(1)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing)
+                                ) {
+                                    if (row.largeOnStart) {
+                                        PhotoWallImageTile(
+                                            photoUrl = largePhoto,
+                                            onPhotoClick = onPhotoClick,
+                                            isDarkTheme = isDarkTheme,
+                                            modifier = Modifier
+                                                .width(collageLargeWidth)
+                                                .height(collageLargeHeight)
+                                        )
+                                    }
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing)
+                                    ) {
+                                        stackedPhotos.forEach { photoUrl ->
+                                            PhotoWallImageTile(
+                                                photoUrl = photoUrl,
+                                                onPhotoClick = onPhotoClick,
+                                                isDarkTheme = isDarkTheme,
+                                                modifier = Modifier
+                                                    .width(collageSmallWidth)
+                                                    .height(collageSmallHeight)
+                                            )
+                                        }
+                                    }
+                                    if (!row.largeOnStart) {
+                                        PhotoWallImageTile(
+                                            photoUrl = largePhoto,
+                                            onPhotoClick = onPhotoClick,
+                                            isDarkTheme = isDarkTheme,
+                                            modifier = Modifier
+                                                .width(collageLargeWidth)
+                                                .height(collageLargeHeight)
+                                        )
+                                    }
+                                }
+                            }
+                            PhotoWallRowType.PAIR -> {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(ProfilePhotoWallImageSpacing)
+                                ) {
+                                    row.photoUrls.forEach { photoUrl ->
+                                        PhotoWallImageTile(
+                                            photoUrl = photoUrl,
+                                            onPhotoClick = onPhotoClick,
+                                            isDarkTheme = isDarkTheme,
+                                            modifier = Modifier
+                                                .width(pairItemWidth)
+                                                .height(pairItemHeight)
+                                        )
+                                    }
+                                }
+                            }
+                            PhotoWallRowType.SINGLE -> {
+                                PhotoWallImageTile(
+                                    photoUrl = row.photoUrls.first(),
+                                    onPhotoClick = onPhotoClick,
+                                    isDarkTheme = isDarkTheme,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(singleItemHeight)
                                 )
                             }
                         }
@@ -479,6 +617,27 @@ private fun PhotoWallSection(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PhotoWallImageTile(
+    photoUrl: String,
+    onPhotoClick: (String) -> Unit,
+    isDarkTheme: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(if (isDarkTheme) Color(0xFF2A2A2A) else Color(0xFFE8E8E8))
+            .clickable { onPhotoClick(photoUrl) }
+    ) {
+        AsyncImage(
+            model = RetrofitClient.normalizeBackendMediaUrlForDisplay(photoUrl),
+            contentDescription = "资料照片",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 

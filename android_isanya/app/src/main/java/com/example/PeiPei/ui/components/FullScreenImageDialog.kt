@@ -10,17 +10,24 @@ import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.view.WindowCompat
+import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.ui.util.findComposeDialogWindow
 
@@ -33,9 +40,20 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 @Composable
 fun FullScreenImageDialog(
     imageUrl: String,
+    imageUrls: List<String> = listOf(imageUrl),
+    initialPage: Int = 0,
     onDismiss: () -> Unit
 ) {
-    if (imageUrl.isNotEmpty()) {
+    val displayImageUrls = imageUrls
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .ifEmpty { imageUrl.trim().takeIf { it.isNotEmpty() }?.let(::listOf) ?: emptyList() }
+
+    if (displayImageUrls.isNotEmpty()) {
+        val pagerState = rememberPagerState(
+            initialPage = initialPage.coerceIn(0, displayImageUrls.lastIndex),
+            pageCount = { displayImageUrls.size }
+        )
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(
@@ -131,11 +149,31 @@ fun FullScreenImageDialog(
                     .background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                ZoomableFitAsyncImage(
-                    model = RetrofitClient.normalizeBackendMediaUrlForDisplay(imageUrl),
-                    contentDescription = "Full Screen Avatar",
-                    onClickWhenNotZoomed = onDismiss,
-                )
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize()
+                ) { page ->
+                    ZoomableFitAsyncImage(
+                        model = RetrofitClient.normalizeBackendMediaUrlForDisplay(displayImageUrls[page]),
+                        contentDescription = "Full Screen Image",
+                        embedInHorizontalPager = displayImageUrls.size > 1,
+                        onClickWhenNotZoomed = onDismiss,
+                    )
+                }
+
+                if (displayImageUrls.size > 1) {
+                    Text(
+                        text = "${pagerState.currentPage + 1}/${displayImageUrls.size}",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 28.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Color(0x66000000))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
+                }
             }
         }
     }
