@@ -54,6 +54,7 @@ import androidx.navigation.NavController
 import com.example.Lulu.R
 import com.example.Lulu.ui.navigation.Screen
 import com.example.Lulu.data.local.AppDataStore
+import com.example.Lulu.data.model.PublishFormContentCatalog
 import com.example.Lulu.data.model.ServiceCategories
 import com.example.Lulu.data.model.ServicePublishTaxonomy
 import com.example.Lulu.data.model.User
@@ -157,6 +158,7 @@ fun CreateServiceScreen(
     /** 新建时为 null，表示尚未选择标签（必填）；编辑时由已有服务填充。 */
     var serviceCategory by remember { mutableStateOf<String?>(null) }
     var showCategoryDialog by remember { mutableStateOf(false) }
+    var showCopyTemplateDialog by remember { mutableStateOf(false) }
     /** 新建且未通过路由传入类目时，先全屏选类目再填表。 */
     var showCategoryGate by remember(serviceId, initialCategory, isEditMode) {
         mutableStateOf(!isEditMode && initialCategory.isNullOrBlank())
@@ -238,12 +240,15 @@ fun CreateServiceScreen(
     var showServiceDeclarationsSheet by remember { mutableStateOf(false) }
     LaunchedEffect(initialCategory, isEditMode) {
         if (!isEditMode && !initialCategory.isNullOrBlank()) {
-            serviceCategory = ServiceCategories.normalize(initialCategory)
+            serviceCategory = PublishFormContentCatalog.normalizeCategory(initialCategory)
         }
     }
 
     val formHints = remember(serviceCategory) {
-        serviceCategory?.let { ServiceCategories.publishFormHints(it) }
+        PublishFormContentCatalog.guidanceFor(serviceCategory)
+    }
+    val copyTemplates = remember(serviceCategory) {
+        formHints.templates
     }
 
     val totalSections = 8
@@ -954,6 +959,45 @@ fun CreateServiceScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(if (isDarkTheme) Color(0xFF262628) else Color(0xFFF7F4F5))
+                                .border(1.dp, dividerColor, RoundedCornerShape(18.dp))
+                                .clickable { showCopyTemplateDialog = true }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "从模板导入",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(3.dp))
+                                Text(
+                                    text = if (serviceCategory == null) {
+                                        "先导入一版通用文案，选择类别后会看到更贴合的模板。"
+                                    } else {
+                                        "当前类别已提供 4 种风格模板，导入后可继续修改。"
+                                    },
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp,
+                                    color = placeholderColor
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = ">",
+                                fontSize = 16.sp,
+                                color = placeholderColor
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         BasicTextField(
                             value = title,
                             onValueChange = {
@@ -975,7 +1019,7 @@ fun CreateServiceScreen(
                                 Box(modifier = Modifier.fillMaxWidth()) {
                                     if (title.isEmpty()) {
                                         Text(
-                                            text = formHints?.titlePlaceholder ?: "用一句话概括你的服务",
+                                            text = formHints.titlePlaceholder,
                                             fontSize = 20.sp,
                                             lineHeight = 26.sp,
                                             color = placeholderColor.copy(alpha = 0.7f),
@@ -1015,8 +1059,7 @@ fun CreateServiceScreen(
                                 ) {
                                     if (description.isEmpty()) {
                                         Text(
-                                            text = formHints?.descriptionPlaceholder
-                                                ?: "详细介绍服务内容、流程和亮点，帮助用户快速了解并下单。",
+                                            text = formHints.descriptionPlaceholder,
                                             fontSize = 15.sp,
                                             lineHeight = 22.sp,
                                             color = placeholderColor.copy(alpha = 0.7f)
@@ -1029,7 +1072,7 @@ fun CreateServiceScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        if (formHints?.categoryTip != null) {
+                        if (formHints.categoryTip != null) {
                             Text(
                                 text = formHints.categoryTip,
                                 fontSize = 13.sp,
@@ -1210,6 +1253,20 @@ fun CreateServiceScreen(
                 serviceCategory = ServiceCategories.OTHER
                 errorMessage = null
                 showCategoryGate = false
+            }
+        )
+    }
+
+    if (showCopyTemplateDialog) {
+        PublishCopyTemplateDialog(
+            category = serviceCategory,
+            templates = copyTemplates,
+            onDismiss = { showCopyTemplateDialog = false },
+            onApply = { template ->
+                title = template.title
+                description = template.description
+                errorMessage = null
+                showCopyTemplateDialog = false
             }
         )
     }
@@ -1981,6 +2038,117 @@ fun ServiceTextEditDialog(
                 Text("确定")
             }
         },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+private fun PublishCopyTemplateDialog(
+    category: String?,
+    templates: List<com.example.Lulu.data.model.PublishCopyTemplate>,
+    onDismiss: () -> Unit,
+    onApply: (com.example.Lulu.data.model.PublishCopyTemplate) -> Unit,
+) {
+    val scrollState = rememberScrollState()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("从模板导入")
+                Text(
+                    text = if (category.isNullOrBlank()) {
+                        "先提供 4 种通用文案模板；选择类别后，会看到更贴合当前方向的模板。"
+                    } else {
+                        "已为“$category”准备 4 种文案风格，导入后你可以继续按自己的内容修改。"
+                    },
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 520.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                templates.forEach { template ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.surface)
+                            .border(
+                                1.dp,
+                                MaterialTheme.colorScheme.outline.copy(alpha = 0.16f),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = template.styleTitle,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = template.styleSubtitle,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(999.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                            ) {
+                                Text(
+                                    text = "模板",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = template.title,
+                            fontSize = 15.sp,
+                            lineHeight = 22.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = template.description,
+                            fontSize = 13.sp,
+                            lineHeight = 20.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            onClick = { onApply(template) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text("导入这个模板")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("取消")

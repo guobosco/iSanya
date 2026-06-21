@@ -233,7 +233,7 @@ fun ServiceCategoryPickerGateDialog(
                                         title = seed.title,
                                         subtitle = experienceCategorySubtitle(seed.title),
                                         icon = experienceCategoryIcon(seed.title),
-                                        onPublish = { onPickCategory(ServiceCategories.normalize(seed.title)) }
+                                        onPublish = { onPickCategory(seed.title) }
                                     )
                                 }
                             }
