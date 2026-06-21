@@ -99,6 +99,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.foundation.text.KeyboardOptions
@@ -115,6 +116,7 @@ import androidx.core.graphics.ColorUtils
 import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
+import com.example.Lulu.R
 import com.example.Lulu.data.local.AppDataStore
 import com.example.Lulu.data.remote.RetrofitClient
 import com.example.Lulu.data.model.Service
@@ -273,6 +275,48 @@ private fun buildServiceKeywordTags(service: Service): List<String> {
     }.distinct().take(8)
 }
 
+private data class ServiceCertificationCopy(
+    val title: String,
+    val description: String,
+)
+
+private fun buildServiceCertificationCopy(service: Service): ServiceCertificationCopy {
+    return when (ServiceCategories.normalize(service.category)) {
+        ServiceCategories.LOCAL_GUIDE -> ServiceCertificationCopy(
+            title = "由熟悉在地路线与节奏的主理人提供的本地陪伴",
+            description = "这类服务更看重路线判断、时间安排和临场沟通，方便你更轻松地安排行程与体验城市。"
+        )
+        ServiceCategories.PHOTO -> ServiceCertificationCopy(
+            title = "由懂机位与氛围表达的主理人提供的影像记录",
+            description = "这类服务更看重拍摄引导、场景选择和成片交付，帮助你把旅行中的重要时刻自然地留下来。"
+        )
+        ServiceCategories.DJ_ATMOSPHERE -> ServiceCertificationCopy(
+            title = "由擅长控场与互动的主理人提供的现场氛围服务",
+            description = "这类服务更看重音乐节奏、现场配合和互动体验，适合聚会、派对和需要热场的活动场景。"
+        )
+        ServiceCategories.FITNESS_COACH -> ServiceCertificationCopy(
+            title = "由有训练经验的主理人提供的运动指导与陪练",
+            description = "这类服务更看重动作讲解、强度把控和安全提醒，帮助你在合适节奏里完成训练或体验。"
+        )
+        ServiceCategories.PRIVATE_CHEF -> ServiceCertificationCopy(
+            title = "由懂食材搭配与出品节奏的主理人提供的餐饮体验",
+            description = "这类服务更看重菜单安排、烹饪出品和用餐氛围，适合家宴、聚餐和旅行中的特别一餐。"
+        )
+        ServiceCategories.MAKEUP -> ServiceCertificationCopy(
+            title = "由熟悉妆面风格与造型搭配的主理人提供的妆造服务",
+            description = "这类服务更看重妆面完成度、风格匹配和现场补妆需求，让你的整体状态在重要场合更完整。"
+        )
+        ServiceCategories.SKILL_TEACHING -> ServiceCertificationCopy(
+            title = "由有实操经验的主理人提供的技能学习指导",
+            description = "这类服务更看重教学节奏、过程反馈和上手陪练，帮助你更快理解内容并进入实际练习状态。"
+        )
+        else -> ServiceCertificationCopy(
+            title = "由经过资料核验的主理人提供的本地服务",
+            description = "这类服务更看重沟通确认、服务边界与实际交付内容，建议在预订前和主理人把细节说明清楚。"
+        )
+    }
+}
+
 @Composable
 private fun ServiceDetailBottomPrice(
     priceText: String,
@@ -304,6 +348,73 @@ private fun ServiceDetailBottomPrice(
                 fontWeight = FontWeight.Normal,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun ServiceCertificationSection(
+    service: Service,
+    onReportIssueClick: () -> Unit,
+) {
+    val copy = remember(service.id, service.category) {
+        buildServiceCertificationCopy(service)
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 44.dp, bottom = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.service_certification_seal),
+            contentDescription = "服务认证钢印",
+            modifier = Modifier.size(132.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+        Text(
+            text = copy.title,
+            color = Color(0xFF1A1A1A),
+            fontSize = 17.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = copy.description,
+            modifier = Modifier.widthIn(max = 300.dp),
+            color = ServiceDetailPriceSubtitleGray,
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 1.dp,
+            color = DetailScreenTagDividerColor,
+        )
+        Spacer(modifier = Modifier.height(18.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "发现有问题？",
+                color = Color(0xFF8A8A8A),
+                fontSize = 13.sp,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "举报此服务",
+                modifier = Modifier.clickable(onClick = onReportIssueClick),
+                color = Color(0xFF555555),
+                fontSize = 13.sp,
+                textDecoration = TextDecoration.Underline,
             )
         }
     }
@@ -1088,6 +1199,14 @@ fun ServiceDetailScreen(
                                 onShowMore = { showAllServiceReviewsSheet = true },
                             )
                         }
+                        ServiceCertificationSection(
+                            service = service!!,
+                            onReportIssueClick = {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("举报入口即将开放")
+                                }
+                            }
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
